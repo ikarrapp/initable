@@ -187,6 +187,7 @@ header{min-width:0}header button{white-space:nowrap}
 .hpmini::before,.hpmini::after{position:absolute;top:50%;transform:translateY(-50%);color:var(--line);font-weight:700;font-size:1.1rem}
 .hpmini::before{content:"−";left:8px}.hpmini::after{content:"+";right:8px}
 .livedot{color:var(--hp)}
+.ver{margin:6px 0 0;text-align:center;font-size:.72rem;color:var(--muted);opacity:.7;font-variant-numeric:tabular-nums}
 .share{display:flex;gap:12px;align-items:center}.qr{width:150px;flex:none;background:#fff;border-radius:8px;padding:4px}.qr svg{display:block;width:100%;height:auto}
 .sharetxt{display:flex;flex-direction:column;gap:6px;min-width:0}.code{font-size:1.25rem;letter-spacing:.06em;word-break:break-all;color:var(--accent);font-variant-numeric:tabular-nums}
 .joinrow{display:flex;gap:8px}.joinrow input{flex:1;min-width:0;font:inherit;font-size:1.2rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px}
@@ -331,7 +332,9 @@ function renderWelcome(){const ps=DB.parties;document.getElementById("app").inne
   <button class="next" id="create">${ps.length?"New table":"Create my party"}</button>
   ${ps.some(p=>p.demo)?"":`<button class="ghost" id="demo">Try a demo</button>`}
   ${DBX?`<button class="ghost" id="asplayer">Open the player screen</button>`:""}
-  ${SKIN_PICKER?`<div class="skins"><span class="steplbl">Skin</span>${Object.entries(SKINS).map(([k,v])=>`<button data-skin="${k}" class="${skin()===k?"on":""}">${v}</button>`).join("")}</div>`:""}</section>`;save()}
+  ${SKIN_PICKER?`<div class="skins"><span class="steplbl">Skin</span>${Object.entries(SKINS).map(([k,v])=>`<button data-skin="${k}" class="${skin()===k?"on":""}">${v}</button>`).join("")}</div>`:""}
+  <p class="ver">Initable ${APP_VERSION}${FB?" · live sync ready":(window.claude?"":" · offline mode")}</p></section>`;save()}
+const APP_VERSION="v0.4";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
