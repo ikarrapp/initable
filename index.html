@@ -188,6 +188,9 @@ header{min-width:0}header button{white-space:nowrap}
 .hpmini::before,.hpmini::after{position:absolute;top:50%;transform:translateY(-50%);color:var(--line);font-weight:700;font-size:1.1rem}
 .hpmini::before{content:"−";left:8px}.hpmini::after{content:"+";right:8px}
 .livedot{color:var(--hp)}
+.dot-ok{color:var(--hp)}.dot-away{color:var(--w2)}.dot-off{color:var(--muted)}.dot-err{color:var(--crit)}
+.dotlbl{font-family:var(--ui);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);vertical-align:.2em}
+.livewarn{color:var(--crit)}.warntxt{color:var(--crit)}
 .pcount{font-family:var(--ui);font-size:.7rem;font-weight:700;color:var(--hp);vertical-align:.5em;margin-left:1px}
 .sidebtn .ic{width:20px;height:20px;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .sidebtn:hover .ic{stroke:var(--accent)}.sidebtn{font-size:.8rem;color:var(--crit)}
@@ -362,7 +365,7 @@ function installBlock(){if(window.claude||isStandalone())return "";
   if(installEvt)return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Add it to your home screen. Works offline.</span></div><button class="next" id="install">Install</button></div>`;
   if(isIOS())return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Tap <svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v9h14v-9"/></svg> in Safari, then “Add to Home Screen”.</span></div></div>`;
   return ""}
-const APP_VERSION="v0.11";
+const APP_VERSION="v0.13";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
@@ -372,7 +375,7 @@ function applySkin(k,picked){if(!SKINS[k])k=DEFAULT_SKIN;document.documentElemen
 applySkin(skin());
 function tableSheet(){const p=P();return `<div class="sheet" id="shade"><div role="dialog" aria-label="Table settings">
   <h2>Table${FB&&p.room?` <span class="note">[${p.members??0} player${(p.members??0)===1?"":"s"}]</span>`:""}</h2><label>Table name<input type="text" id="f-tname" value="${esc(p.name)}"></label>
-  ${shareBlock()}${DBX?`<button class="${P().live?"next":"ghost"}" id="livetoggle">${P().live?"Live with players · tap to stop":"Share this table live with players"}</button>
+  ${FB&&p.live&&p.liveErr?`<p class="note warntxt">Live sharing interrupted: players don’t see your changes.</p><button class="next" id="relive">Reconnect live sharing</button>`:""}${shareBlock()}${DBX?`<button class="${P().live?"next":"ghost"}" id="livetoggle">${P().live?"Live with players · tap to stop":"Share this table live with players"}</button>
   ${FB?"":`<p class="note">Players open this same page on their phone, signed in to Claude with edit access, and tap “Open the player screen”. They see the party and the fight and can change any HP. They never see your encounters.</p>`}`:""}
   <div class="row"><button class="ghost danger" id="deltable">${confirmDel?"Tap again to delete":"Delete table"}</button><button class="next" id="tableok">Done</button></div></div></div>`}
 const save=()=>{if(ROLE!=="player"){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}schedulePush()};
@@ -400,7 +403,7 @@ function partyCard(c){return `<button class="card ${c.hp<=0?"down":""}" data-edi
      <span class="hpv ${hpCls(c)}">${c.hp+c.temp}<small>/${c.max}</small></span>
      <span class="bar"><i style="width:${Math.max(0,Math.min(100,c.hp/c.max*100))}%;background:${hpColor(c)}"></i></span></button>`}
 function renderParty(){const pcs=S.list.filter(c=>!c.mon);
-  let h=`<header><button id="tables" aria-label="All tables">◀</button><button class="round tname" id="rename">${P().live?`<span class="livedot">●</span> `:""}${esc(P().name)} ✎</button>${awakeBtn()}<button id="add">+ Add</button></header>
+  let h=`<header><button id="tables" aria-label="All tables">◀</button><button class="round tname" id="rename">${P().live?statusDot()+" ":""}${esc(P().name)} ✎</button>${awakeBtn()}<button id="add">+ Add</button></header>
   <div class="party">${pcs.length?pcs.map(c=>tile(c,false)).join(""):`<p class="hint">No characters yet. When the players arrive, hand them the phone: each taps “+ Add” to enter their character once. You can already prepare encounters with “Start fight”.</p>`}</div>
   ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting</p>`}
   <div class="row"><button class="ghost" id="longrest">Long rest</button><button class="next" id="startmenu">Start fight</button></div>`;
@@ -414,7 +417,7 @@ function render(){
   if(!S.inCombat)return renderParty();
   const order=sorted(); if(S.turn>=order.length)S.turn=0;
   const a=order[S.turn]; const rest=order.slice(S.turn+1).concat(order.slice(0,S.turn));
-  let h=`<header><div class="round">${P()?.live?`<span class="livedot">●</span> `:""}Round <b>${S.round}</b></div>
+  let h=`<header><div class="round">${P()?.live?statusDot()+" ":""}Round <b>${S.round}</b></div>
    ${awakeBtn()}<button id="endfight">End fight</button><button id="add">+ Add</button></header>`;
   h+=`<div class="party combat">${order.slice(S.turn).concat(order.slice(0,S.turn)).map(c=>tile(c,c===a)).join("")}</div>
   ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting · tap a name for details</p>`}`;
@@ -498,9 +501,10 @@ document.addEventListener("pointerdown",e=>{const z=e.target.closest(".hpzone");
 ["pointerup","pointercancel","pointerleave"].forEach(ev=>document.addEventListener(ev,stopHold));
 document.addEventListener("click",e=>{
   const t=e.target, a=S?sorted()[S.turn]:null;
-  const op=t.closest("[data-open]"); if(op){openParty(+op.dataset.open);render();return}
+  const op=t.closest("[data-open]"); if(op){openParty(+op.dataset.open);render();const pp=P();if(pp&&pp.live)ensureLive(pp);return}
   if(t.id==="tables"){DB.cur=null;S=null;sheet=null;render();return}
   if(t.closest("#rename")){sheet="table";confirmDel=false;render();return}
+  if(t.id==="relive"){const p=P();p.liveErr=false;liveMsg="Reconnecting…";render();ensureLive(p).then(()=>{liveMsg="";render()});return}
   if(t.id==="livetoggle"){P().name=document.getElementById("f-tname").value.trim()||P().name;setLive(!P().live);return}
   if(t.id==="asplayer"){setRole("player");return}
   if(t.closest("#install")&&installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;render()});return}
@@ -608,7 +612,7 @@ function clean(r){r=r||{};const ds=Array.isArray(r.ds)?r.ds:[];const mon=r.mon==
   return o}
 function toShared(c){const o=clean(c);if(c.mon&&c.max!=null){const w=wound(c);o.tier=Math.max(0,WCOL.indexOf(w.color));o.alive=w.alive}return o}
 function cleanMeta(m){m=m||{};const id=Number(m.tableId);
-  return {deleted:m.deleted===true,tableId:Number.isFinite(id)&&id>0?id:null,tableName:str(m.tableName,60),inCombat:m.inCombat===true,round:num(m.round,1,1),turn:num(m.turn,0,0,999)}}
+  return {gmSeen:num(m.gmSeen,0,0,9e15),deleted:m.deleted===true,tableId:Number.isFinite(id)&&id>0?id:null,tableName:str(m.tableName,60),inCombat:m.inCombat===true,round:num(m.round,1,1),turn:num(m.turn,0,0,999)}}
 function schedulePush(){if(!DBX||(FB&&!ROOM))return;clearTimeout(pushT);pushT=setTimeout(push,250)}
 async function push(){if(!DBX||(FB&&!ROOM))return;if(pushing){again=true;return}pushing=true;
   try{let list,meta;
@@ -632,13 +636,15 @@ function mergeRemote(local,docs){const by=new Map(local.map(c=>[c.id,c])),out=[]
   if(ROLE!=="player")for(const l of by.values())out.push(l);
   return out}
 function onRemote(){
-  if(ROLE==="player"){PS.list=mergeRemote(PS.list,REM.docs);
+  if(ROLE==="player"){noteGmBeat(REM.meta);PS.list=mergeRemote(PS.list,REM.docs);
     if(FB&&ROOM&&REM.meta&&REM.meta.tableName){const j=joined().find(x=>x.id===ROOM);if(j&&j.name!==REM.meta.tableName)rememberJoined(ROOM,REM.meta.tableName)}
     if(REM.meta){const sm=ser(REM.meta);if(sm!==lastMeta){lastMeta=sm;PS.inCombat=!!REM.meta.inCombat;PS.round=REM.meta.round||1;PS.turn=REM.meta.turn||0}}
     if(!sheet)render();return}
   const p=P();if(!S||!p||!p.live||!REM.meta||REM.meta.tableId!==DB.cur)return;
   S.list=mergeRemote(S.list,REM.docs);
-  const sm=ser(REM.meta);if(sm!==lastMeta){lastMeta=sm;S.round=REM.meta.round||1;S.turn=REM.meta.turn||0;S.inCombat=!!REM.meta.inCombat}
+  // compare only the fields the GM writes (not the heartbeat), so the heartbeat never triggers a write loop
+  const M=REM.meta,sm=ser({tableId:M.tableId,tableName:M.tableName,inCombat:M.inCombat,round:M.round,turn:M.turn});
+  if(sm!==lastMeta){lastMeta=sm;S.round=M.round||1;S.turn=M.turn||0;S.inCombat=!!M.inCombat}
   if(!sheet)render();schedulePush()}
 function subscribeRemote(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];
   unsubs.push(DBX.doc("meta/live").onSnapshot(s=>{REM.meta=s.exists?cleanMeta(s.data()):null;onRemote()},e=>console.warn("meta",e)));
@@ -666,7 +672,7 @@ function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
   if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">${FB?(ROOM?"Waiting for the GM to share the table. This screen updates on its own.":"Scan the GM’s QR code, or type the room code shown on the GM’s phone."):"Waiting for the GM to share a table live. This screen updates on its own."}</p>${join}${installBlock()}${back}</section>`;return}
   S=PS;const order=sorted();if(S.turn>=order.length)S.turn=0;const a=order[S.turn];
   const shown=S.inCombat?order.slice(S.turn).concat(order.slice(0,S.turn)):S.list.filter(c=>!c.mon);
-  app.innerHTML=`<header>${IS_OWNER?`<button id="asgm" aria-label="Back to my tables">◀</button>`:""}<div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${awakeBtn()}<button id="add">+ Add</button></header>
+  app.innerHTML=`<header>${IS_OWNER?`<button id="asgm" aria-label="Back to my tables">◀</button>`:""}<div class="round tname">${statusDot()} ${esc(m.tableName||"Table")}${statusLabel()}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${awakeBtn()}<button id="add">+ Add</button></header>
   <div class="party ${S.inCombat?"combat":""}">${shown.length?shown.map(c=>tile(c,S.inCombat&&c===a)).join(""):`<p class="hint">No characters at this table yet. Tap “+ Add” to enter yours.</p>`}</div>
   ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting</p>`}
   ${S.inCombat?`<div class="row"><button class="ghost" id="prev">◀ Back</button><button class="next" id="next">Next turn</button></div>`:""}
@@ -689,13 +695,13 @@ async function initFirebase(){
   const j=/join=([A-Za-z0-9]{6,12})/.exec(location.hash);
   if(j){const code=j[1].toUpperCase();history.replaceState(null,"",location.pathname+location.search);
     rememberJoined(code);ROLE="player";connectRoom(code)}
-  else{ROLE="gm";watchMembers();const p=DB.parties.find(x=>x.live&&x.room);if(p){try{await claimRoom(p.room);connectRoom(p.room.id)}catch(e){console.warn(e);p.live=false}}}
+  else{ROLE="gm";watchMembers();const p=DB.parties.find(x=>x.live&&x.room);if(p)ensureLive(p)}
   render()}
 const roomRef=id=>FB.fs.doc(FB.db,"rooms",id||ROOM);
 function fbAdapter(){const fs=FB.fs;
   return {doc(path){
       if(path==="meta/live")return {set:d=>fs.setDoc(roomRef(),d,{merge:true}),
-        onSnapshot:(next,err)=>fs.onSnapshot(roomRef(),s=>next({exists:s.exists(),data:()=>s.data()}),err)};
+        onSnapshot:(next,err)=>fs.onSnapshot(roomRef(),{includeMetadataChanges:true},s=>{const fc=!!(s.metadata&&s.metadata.fromCache);if(fc!==FROMCACHE){FROMCACHE=fc;if(!sheet)render()}next({exists:s.exists(),data:()=>s.data()})},err)};
       const ref=()=>fs.doc(FB.db,"rooms",ROOM,"c",path.split("/")[1]);
       return {set:d=>fs.setDoc(ref(),d),delete:()=>fs.deleteDoc(ref())}},
     collection(){return {onSnapshot:(next,err)=>fs.onSnapshot(fs.collection(FB.db,"rooms",ROOM,"c"),q=>next({docs:q.docs.map(d=>({id:d.id,data:()=>d.data()}))}),err)}}}}
@@ -730,8 +736,31 @@ function saveJoined(l){try{localStorage.setItem(KEY+"-joined",JSON.stringify(l.s
 function rememberJoined(id,name){const l=joined().filter(j=>j.id!==id);const old=joined().find(j=>j.id===id);l.unshift({id,name:name||old?.name||""});saveJoined(l)}
 function openJoined(id){rememberJoined(id);ROLE="player";lastSent={};lastMeta="";sheet=null;PS.list=[];connectRoom(id);render()}
 function goHome(){ROLE="gm";sheet=null;DB.cur=null;S=null;if(FB){const p=DB.parties.find(x=>x.live&&x.room);if(p)connectRoom(p.room.id);else disconnectRoom()}render()}
-function connectRoom(id){if(!FB)return;ROOM=id;REM={meta:null,docs:[]};lastSent={};lastMeta="";subscribeRemote();if(ROLE==="player")registerMember(id)}
-function disconnectRoom(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];ROOM=null;REM={meta:null,docs:[]};lastSent={};lastMeta=""}
+// A live table never switches itself off: if the GM's phone cannot reach its room, it retries,
+// then shows "live sharing interrupted" with a reconnect button instead of failing silently.
+async function ensureLive(p){if(!FB||!p||!p.live||!p.room)return;if(ROOM===p.room.id&&!p.liveErr)return;
+  for(let i=0;i<3;i++){try{await claimRoom(p.room);p.liveErr=false;connectRoom(p.room.id);watchMembers();if(!sheet||sheet==="table")render();return}
+    catch(e){console.warn("live reconnect",e);await new Promise(r=>setTimeout(r,1500*(i+1)))}}
+  p.liveErr=true;if(!sheet||sheet==="table")render()}
+// ---------- live status dot ----------
+// green: up to date (and, for players, the GM is active) · orange: GM not active for 2+ min · grey: this phone is offline · red: GM sharing interrupted
+let FROMCACHE=false,lastGmBeat=0,lastGmSeen=0,gmBeatT=null,statusT=null;
+const isOffline=()=>!navigator.onLine||(FB&&ROOM&&FROMCACHE);
+function gmAway(){return ROLE==="player"&&Date.now()-lastGmBeat>150000}
+function statusDot(){if(isOffline())return `<span class="dot dot-off" title="Offline: this phone has no connection">●</span>`;
+  if(ROLE!=="player"&&P()?.liveErr)return `<span class="dot dot-err" title="Live sharing interrupted">●</span>`;
+  if(gmAway())return `<span class="dot dot-away" title="The GM has not been active for a few minutes">●</span>`;
+  return `<span class="dot dot-ok" title="Live">●</span>`}
+function statusLabel(){return isOffline()?` <span class="dotlbl">offline</span>`:(gmAway()?` <span class="dotlbl">GM away</span>`:"")}
+function noteGmBeat(m){if(!m||!m.gmSeen||m.gmSeen===lastGmSeen)return;
+  // first value seen: trust it only if recent (clock skew tolerated); later changes mean the GM is active right now
+  if(lastGmSeen||Math.abs(Date.now()-m.gmSeen)<150000)lastGmBeat=Date.now();lastGmSeen=m.gmSeen}
+function startBeats(){clearInterval(gmBeatT);clearInterval(statusT);gmBeatT=statusT=null;if(!FB||!ROOM)return;
+  if(ROLE!=="player"){const room=ROOM;const beat=()=>{if(ROOM===room)FB.fs.setDoc(roomRef(room),{gmSeen:Date.now()},{merge:true}).catch(()=>{})};beat();gmBeatT=setInterval(beat,60000)}
+  statusT=setInterval(()=>{if(!sheet)render()},30000)}
+window.addEventListener("online",()=>{if(!sheet)render()});window.addEventListener("offline",()=>{if(!sheet)render()});
+function connectRoom(id){if(!FB)return;lastGmBeat=0;lastGmSeen=0;FROMCACHE=false;ROOM=id;REM={meta:null,docs:[]};lastSent={};lastMeta="";subscribeRemote();if(ROLE==="player")registerMember(id);startBeats()}
+function disconnectRoom(){clearInterval(gmBeatT);clearInterval(statusT);gmBeatT=statusT=null;unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];ROOM=null;REM={meta:null,docs:[]};lastSent={};lastMeta=""}
 function joinUrl(id){return location.origin+location.pathname+"#join="+id}
 function shareBlock(){const p=P();if(!FB||!p||!p.live||!p.room)return liveMsg?`<p class="note">${esc(liveMsg)}</p>`:"";
   let qr="";try{const q=qrcode(0,"M");q.addData(joinUrl(p.room.id));q.make();qr=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){}
