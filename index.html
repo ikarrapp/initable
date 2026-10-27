@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f2c">
+<meta name="description" content="Initiative and hit point tracker for tabletop RPG tables: one phone in the middle of the table.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Initiative Table</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Barlow+Semi+Condensed:wght@400;600;700&display=swap">
+<style>
+/* Layout: one locked portrait column — active combatant as a large card, the rest of the turn order below */
+:root{
+  --bg:#14110f; --panel:#1f1a17; --line:#3a312b; --fg:#efe6dc; --muted:#a3968a;
+  --accent:#d9a441; --hp:#6fbf73; --hpbase:#efe6dc; --temp:#cfeaff; --tempglow:rgba(120,190,255,.75); --hurt:#e0803c; --crit:#d9534f; --monster:#8f6cc4;
+  /* every colour of the app is a token: a skin only redefines this list */
+  --zone:#1a1613; --chip:#2c2521; --onaccent:#1b140c; --oncrit:#fff; --conc:#5b8fd6; --monsterfg:#d8c6f2; --scrim:rgba(0,0,0,.6);
+  --w1:#e6c84a; --w2:#e8893a; --w3:#d9534f; --w4:#ff2e2e; --glow:rgba(255,46,46,.8);
+  --display:"Alegreya SC", Georgia, serif; --ui:"Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  color-scheme:dark;
+}
+/* ---- skins: copy a block, rename it, change the values ---- */
+:root[data-skin="parchment"]{
+  --bg:#efe4cc; --panel:#f8f0de; --line:#cdb994; --fg:#2b2117; --muted:#7a6a55; --accent:#8a3b12; --hp:#3f7d3a; --hpbase:#2b2117;
+  --temp:#1f6fb5; --tempglow:rgba(31,111,181,.35); --hurt:#b8661f; --crit:#a3261d; --monster:#5b3a8a;
+  --zone:#efe2c6; --chip:#e8d9b8; --onaccent:#fdf6e6; --oncrit:#fff; --conc:#1f6fb5; --monsterfg:#5b3a8a; --scrim:rgba(43,33,23,.45);
+  --w1:#b08a12; --w2:#c0621a; --w3:#a3261d; --w4:#d4140b; --glow:rgba(212,20,11,.35);
+  color-scheme:light;
+}
+:root[data-skin="crimson"]{
+  --bg:#0d0809; --panel:#1a0f11; --line:#3b1d22; --fg:#f1e3e3; --muted:#a88e91; --accent:#c4122f; --hp:#8fbf8a; --hpbase:#f1e3e3;
+  --temp:#bfe4ff; --tempglow:rgba(150,200,255,.7); --hurt:#d85a3a; --crit:#e0233f; --monster:#7d5aa8;
+  --zone:#140b0d; --chip:#2a1418; --onaccent:#fff3f3; --oncrit:#fff; --conc:#6b8fd6; --monsterfg:#e2d0f5; --scrim:rgba(0,0,0,.7);
+  --w1:#e8c46a; --w2:#e6803c; --w3:#d6334a; --w4:#ff1f3d; --glow:rgba(255,31,61,.85);
+}
+/* Gilded Night: navy + thin gold double frames with small corner flourishes (colours and ornaments are tokens/masks) */
+:root[data-skin="gilded"]{
+  --bg:#0a0f2c; --panel:rgba(22,30,78,.78); --line:rgba(216,181,106,.35); --fg:#f1ead6; --muted:#a9a8c9; --accent:#d8b56a; --hp:#9fd6a6; --hpbase:#f1ead6;
+  --temp:#d9f1ff; --tempglow:rgba(160,215,255,.8); --hurt:#e39a4a; --crit:#e2584f; --monster:#9b7ad6;
+  --zone:transparent; --chip:rgba(216,181,106,.14); --onaccent:#0a0f2c; --oncrit:#fff; --conc:#8fb4ff; --monsterfg:#e6dbff; --scrim:rgba(4,6,20,.72);
+  --w1:#ecd27a; --w2:#eb9a4c; --w3:#e2584f; --w4:#ff3b4d; --glow:rgba(255,59,77,.8);
+  --star:rgba(255,248,225,.55); --bgtop:#1b2a78; --goldsoft:rgba(216,181,106,.45);
+  --dsfail:#ca0f30; --dssucc:#a691e1; --panelact:rgba(40,52,120,.9); --pm:#d8b56a;
+}
+:root[data-skin="gilded"] body{background:
+  radial-gradient(1px 1px at 12% 18%,var(--star) 50%,transparent 51%),radial-gradient(1px 1px at 78% 9%,var(--star) 50%,transparent 51%),
+  radial-gradient(1.5px 1.5px at 63% 41%,var(--star) 50%,transparent 51%),radial-gradient(1px 1px at 31% 72%,var(--star) 50%,transparent 51%),
+  radial-gradient(1px 1px at 88% 83%,var(--star) 50%,transparent 51%),radial-gradient(ellipse at 50% -10%,var(--bgtop),var(--bg) 65%) fixed;background-color:var(--bg)}
+:root[data-skin="gilded"] .ptile{position:relative;border:none;border-radius:2px;box-shadow:none}
+:root[data-skin="gilded"] .ptile.mon{border-left:6px solid var(--monster)}
+/* monsters: right-hand corners only, the coloured edge marks the left side */
+:root[data-skin="gilded"] .ptile.mon::after{
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 0) scale(-1 1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top right/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 24) scale(-1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom right/18px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 0) scale(-1 1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top right/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 24) scale(-1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom right/18px no-repeat}
+:root[data-skin="gilded"] .ptile::after{content:"";position:absolute;inset:0;pointer-events:none;background:var(--goldsoft);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform=''%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top left/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 0) scale(-1 1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top right/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(0 24) scale(1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom left/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 24) scale(-1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom right/18px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform=''%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top left/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 0) scale(-1 1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") top right/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(0 24) scale(1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom left/18px no-repeat,
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='translate(24 24) scale(-1 -1)'%3E%3Cpath d='M1.5 23V9C1.5 4.9 4.9 1.5 9 1.5H23' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5 23V11C5 7.7 7.7 5 11 5H23' fill='none' stroke='black' stroke-width='.8'/%3E%3Ccircle cx='9.5' cy='9.5' r='1.7'/%3E%3C/g%3E%3C/svg%3E") bottom right/18px no-repeat}
+:root[data-skin="gilded"] .ptile.act{background:var(--panelact);box-shadow:0 0 16px var(--goldsoft)}
+:root[data-skin="gilded"] .ptile.act::after{background:var(--accent)}
+:root[data-skin="gilded"] .ptile .phead{border-color:var(--goldsoft);padding-left:20px;padding-right:20px}
+:root[data-skin="gilded"] .ptile>.in{padding:4px 6px}
+:root[data-skin="gilded"] .ptile .val small{padding:0 14px}
+.ptile{container-name:tile}
+@container tile (max-height:96px){.ptile .bighp::before,.ptile .bighp::after{font-size:1.3rem}.ptile .bighp::before{left:5px}.ptile .bighp::after{right:5px}.ptile .bighp{padding:0 22px}}
+@container (max-height:96px){:root[data-skin="gilded"] .ptile .phead{padding-left:10px;padding-right:4px;width:56%}:root[data-skin="gilded"] .ptile .val small{padding:0;white-space:nowrap}}
+:root[data-skin="gilded"] .round,:root[data-skin="gilded"] .welcome h1{letter-spacing:.04em}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;overflow-x:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:16px;overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{height:100%;width:100%;display:flex;flex-direction:column;gap:10px;padding-block:10px;max-width:430px;margin:0 auto;min-width:0}
+#app>*{min-width:0;max-width:100%}
+@media (orientation:landscape) and (max-height:600px){
+  #app{position:fixed;top:50%;left:50%;width:100vh;height:100vw;max-width:none;transform:translate(-50%,-50%) rotate(-90deg);padding-inline:16px}
+}
+button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:10px;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;align-items:center;gap:8px}
+.round{font-family:var(--display);font-size:1.15rem;color:var(--accent);flex:1}
+.round b{font-variant-numeric:tabular-nums}
+header button{padding:6px 10px;font-size:.85rem;letter-spacing:.04em;text-transform:uppercase}
+header button.on{border-color:var(--monster);color:var(--monsterfg)}
+.list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:0}
+.card{flex-shrink:0;display:grid;grid-template-columns:38px minmax(0,1fr) auto;min-width:0;overflow:hidden;align-items:center;gap:10px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;text-align:left;width:100%}
+.card.monster{border-left:4px solid var(--monster)}
+.card.down{opacity:.6}
+.init{font-size:1.4rem;font-weight:700;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.name{font-family:var(--display);font-size:1.1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.tag{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:6px;background:var(--accent);color:var(--onaccent)}
+.tag.bad{background:var(--dsfail,var(--crit));color:var(--oncrit)}.tag.conc{background:var(--conc);color:var(--oncrit)}
+.active .tags{gap:6px}.active .tag{font-size:.95rem;padding:5px 11px}
+.hpv{font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+.hpv small{color:var(--muted);font-weight:400;font-size:.8rem}
+.bar{grid-column:1/-1;height:4px;background:var(--chip);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--hp)}
+/* active */
+.active{background:var(--panel);border:2px solid var(--accent);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.active .top{display:flex;align-items:center;gap:10px;min-width:0}
+.active .name{font-size:1.5rem;flex:1;min-width:0}
+.active{min-width:0;overflow:hidden}
+.tags{min-width:0}
+header{min-width:0}header button{white-space:nowrap}
+.active .lbl{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.bighp{position:relative;display:block;width:100%;padding:18px 0;border-radius:12px;background:var(--zone);user-select:none;-webkit-user-select:none;touch-action:none;cursor:pointer}
+.bighp::before,.bighp::after{position:absolute;top:50%;transform:translateY(-50%);font-size:1.9rem;color:var(--pm,var(--muted));font-weight:700;opacity:.9}
+.bighp::before{content:"−";left:16px}.bighp::after{content:"+";right:16px}
+.bighp .val{text-align:center;font-size:4.6rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--hpbase)}
+.bighp .val small{display:block;font-size:.95rem;color:var(--muted);font-weight:400;margin-top:4px}
+.val.has-temp,.hpv.has-temp{color:var(--temp)!important;text-shadow:0 0 14px var(--tempglow)}
+.val.zero,.hpv.zero{color:var(--crit)!important}
+.party{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.party{gap:6px;overflow-y:auto}
+.ptile{min-height:52px;flex-shrink:1}
+.hprow{flex:1;min-height:0;display:flex}.hprow .hpzone{flex:1;min-width:0}
+.dcol{display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;align-self:stretch;padding:4px 8px;flex:none}
+.dcol.fails{border-right:3px solid var(--dsfail,var(--crit))}.dcol.succ{border-left:3px solid var(--dssucc,var(--hp))}
+.ptile.down{opacity:1}.ptile.down .phead,.ptile.down .hpzone{opacity:.75}
+.dcol .pip{width:min(22px,22cqh);height:min(22px,22cqh);flex:none}
+.ptile.act{border:2px solid var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.ptile.mon{border-left:4px solid var(--monster)}.ptile.mon.act{border-left-width:4px}
+.ini{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;min-width:1.6em}
+.ptile.act .ini{color:var(--accent)}
+.turn{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:var(--onaccent);border-radius:4px;padding:1px 6px}
+.ptile{flex:1;min-height:0;container-type:size;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ptile>.in{height:100%;display:flex;flex-direction:row}
+.ptile .mid{flex:1;min-width:0;display:flex;flex-direction:column}
+.ptile .phead{display:flex;flex-direction:column;gap:3px;padding:6px 10px;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;text-align:left;width:100%;min-width:0}
+.ptile .prow{display:flex;align-items:center;gap:8px;width:100%;min-width:0}
+.ptile .phead .name{flex:1;min-width:0;font-size:1.05rem}
+.ptile .phead .edit{color:var(--accent);font-size:.8rem;white-space:nowrap}
+.ptile .tags{margin:0}.ptile .tag{font-size:.6rem;padding:1px 5px;letter-spacing:.04em;font-weight:600}
+@container (max-height:96px){
+  .ptile .mid{flex-direction:row}
+  .ptile .phead{width:52%;flex:none;border-bottom:none;border-right:1px solid var(--line);justify-content:center;padding:4px 8px}
+  .ptile .phead .name{font-size:.95rem}
+  .ptile .tags{gap:2px}.ptile .tag{font-size:.58rem;padding:1px 4px;letter-spacing:.02em}
+}
+.ptile .hpzone{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;border-radius:0;padding:0;background:transparent}
+.ptile .val{font-size:min(62cqh,4.6rem);line-height:1}
+.ptile .val small{font-size:min(16cqh,.9rem);margin-top:2px}
+.ptile.down{opacity:.7}
+.welcome{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;max-width:360px;margin:0 auto;width:100%}
+.welcome h1{font-family:var(--display);color:var(--accent);font-size:2.4rem;margin:0;text-wrap:balance}
+.welcome .lead{font-size:1.2rem;line-height:1.4;margin:0}
+.welcome ul{margin:0 0 8px;padding-left:1.1em;color:var(--muted);line-height:1.5}
+.tname{background:none;border:none;padding:0;text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none!important;letter-spacing:0!important;font-size:1.15rem!important}
+.tables{display:flex;flex-direction:column;gap:8px}
+.trow{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;text-align:left;width:100%}
+.trow .name{max-width:100%}
+.chips{display:flex;gap:6px}.chips button{flex:1;padding:8px 0}.chips button.on{border-color:var(--accent);color:var(--accent);background:var(--chip)}
+.psaves{gap:6px;padding:4px 8px;flex-wrap:nowrap;justify-content:center}.psaves .pip{width:22px;height:22px;flex:none}.psaves span{font-size:.7rem;margin-left:6px}
+@container (max-height:96px){.ptile .psaves{display:grid;grid-template-columns:repeat(3,13px);gap:3px;align-content:center;justify-content:center;flex:none;padding:0 5px;border-right:1px solid var(--line)}.ptile .psaves span{display:none}.ptile .psaves .pip{width:13px;height:13px}.ptile .turn{display:none}}
+.sugg{display:flex;flex-direction:column;gap:4px;margin-top:-6px}.sugg:empty{display:none}
+.sugg button{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;text-align:left;border-color:var(--accent)}
+.sugg b{font-family:var(--display);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sugg span{color:var(--muted);font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.namerow{display:flex;gap:10px;align-items:flex-end}.grow{flex:1;min-width:0}
+.step{display:flex;flex-direction:column;gap:4px}.steplbl{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stepbtns{display:flex;align-items:center;gap:4px}.stepbtns button{width:40px;height:40px;padding:0;font-size:1.3rem}
+#cnt-lbl{min-width:38px;text-align:center;font-size:1.2rem;font-variant-numeric:tabular-nums;color:var(--accent)}
+.d20{width:1.25em;height:1.25em;vertical-align:-.28em;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.rollbtn{padding:9px 4px;width:100%;font-size:1rem;font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--onaccent)}
+.encrow{display:flex;gap:6px}.encrow .trow{flex:1;min-width:0}.encrow .trow .note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.encedit{width:48px;flex:none;color:var(--accent);font-size:1.1rem}
+.encitem{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px}
+.encitem .danger{width:100%;padding:9px 4px}
+.launchrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.launchrow .steplbl{width:100%}
+.launchrow button{padding:8px 12px;border-color:var(--accent);color:var(--accent)}
+.list .card{grid-template-columns:minmax(0,1fr) 120px;padding:0 0 0 10px;gap:0}
+.list .card .bar{margin:0 10px 0 0}
+.cinfo{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center;background:none;border:none;border-radius:0;padding:8px 8px 8px 0;text-align:left;min-width:0;width:100%}
+.hpmini{position:relative;display:flex;align-items:center;justify-content:center;align-self:stretch;min-height:52px;border-left:1px solid var(--line);touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none}
+.hpmini::before,.hpmini::after{position:absolute;top:50%;transform:translateY(-50%);color:var(--line);font-weight:700;font-size:1.1rem}
+.hpmini::before{content:"−";left:8px}.hpmini::after{content:"+";right:8px}
+.livedot{color:var(--hp)}
+/* combat: player characters keep a full tile (name on top, HP below); monsters get a slim one-line tile; the list scrolls instead of shrinking */
+.party.combat .ptile:not(.mon){flex:1 0 104px;min-height:104px}
+.party.combat .ptile.mon{flex:0 0 58px;min-height:58px}
+.iconbtn{width:36px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.iconbtn svg{width:20px;height:20px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round}
+.iconbtn.on{border-color:var(--accent)}.iconbtn.on svg{stroke:var(--accent);fill:none}
+.iconbtn.warn{border-color:var(--crit)}.iconbtn.warn svg{stroke:var(--crit)}
+#eco{position:fixed;inset:0;z-index:20;background:var(--eco,#000);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#eco[hidden]{display:none}
+.ecoin{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ecofg,#5a5a66);text-align:center}
+.ecoin b{font-family:var(--display);font-size:1.6rem;font-weight:500}.ecoin span{font-size:1.1rem}.ecoin small{font-size:.75rem;opacity:.7}
+.skins{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}.skins .steplbl{margin-right:4px}
+.skins button{padding:6px 12px;font-size:.85rem}.skins button.on{border-color:var(--accent);color:var(--accent)}
+header button.warn{border-color:var(--crit);color:var(--crit)}
+.demobar{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--accent);border-radius:10px;font-size:.85rem;color:var(--accent)}
+.demobar span{flex:1}.demobar button{padding:6px 10px;font-size:.85rem}
+.val.wound,.hpv.wound{color:var(--crit)}
+.glow{text-shadow:0 0 14px var(--glow)}
+.ghost.pick{border-color:var(--accent);color:var(--accent)}
+.initbtn{font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border-color:var(--accent);padding:4px 10px}
+.hint{font-size:.75rem;color:var(--muted);text-align:center}
+.saves{display:flex;justify-content:center;gap:18px;align-items:center}
+.saves span{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pip{width:26px;height:26px;border-radius:50%;padding:0}
+.pip.s.on{background:var(--dssucc,var(--hp))} .pip.f.on{background:var(--dsfail,var(--crit))}
+.next{font-family:var(--display);font-size:1.3rem;padding:14px;background:var(--accent);color:var(--onaccent);border:none;border-radius:12px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.ghost{padding:10px;font-size:.9rem}
+/* sheet */
+.sheet{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+.sheet>div{background:var(--bg);border-top:2px solid var(--accent);border-radius:16px 16px 0 0;width:100%;max-width:430px;max-height:88%;overflow-y:auto;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.sheet h2{font-family:var(--display);margin:0;font-size:1.4rem;text-wrap:balance}
+label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input[type=text],input[type=number]{font:inherit;font-size:1.1rem;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%;box-sizing:border-box}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.conds{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.conds button{padding:8px;font-size:.9rem;text-align:left}
+.conds button.on{border-color:var(--accent);background:var(--chip);color:var(--accent)}
+.exh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.exh button{width:38px;height:38px;padding:0}
+.exh button.on{background:var(--crit);border-color:var(--crit)}
+.danger{color:var(--crit)}
+.check{flex-direction:row;align-items:center;gap:8px;font-size:.9rem;text-transform:none;letter-spacing:0;color:var(--fg)}
+.check input{width:22px;height:22px}
+.note{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.card,.active{transition:border-color .2s}}
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const CONDS=["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious","Concentration"];
+const KEY="initiative-table-v8";
+const WCOL=["var(--w1)","var(--w2)","var(--w3)","var(--w4)"];
+// wound tiers: one tier per 10 max HP (max 4); steps of 10 up to 40 max HP, quarters above
+function wound(c){const n=Math.max(1,c.count||1),mx=Math.max(1,(c.max||1)/n),d=c.dmg||0;
+  const dead=Math.min(n,Math.floor(d/mx)),alive=n-dead,curD=alive?d-dead*mx:mx;
+  const tiers=Math.min(4,Math.ceil(mx/10)),step=mx<=40?10:mx/4;
+  const i=curD<=0?0:Math.min(tiers-1,Math.ceil(curD/step)-1);
+  return {alive,color:WCOL[4-tiers+i],bright:4-tiers+i===3}}
+function mname(c){const n=c.count||1;return n>1?`${esc(c.name)} ×${wound(c).alive}`:esc(c.name)}
+const sample=()=>({inCombat:false,round:1,turn:0,list:[
+ {id:1,name:"Brynn (Fighter)",init:19,bonus:2,hp:44,max:44,temp:0,conds:[],exh:0,mon:false,ds:[0,0]},
+ {id:3,name:"Sefa (Wizard)",init:15,bonus:3,hp:12,max:27,temp:5,conds:["Concentration"],exh:0,mon:false,hidden:false,ds:[0,0]},
+ {id:4,name:"Odo (Rogue)",init:12,bonus:4,hp:0,max:31,temp:0,conds:["Unconscious"],exh:1,mon:false,hidden:false,ds:[1,1]},
+ {id:6,name:"Mara (Cleric)",init:6,bonus:0,hp:38,max:38,temp:0,conds:[],exh:0,mon:false,hidden:false,ds:[0,0]},
+ {id:7,name:"Kael (Ranger)",init:0,bonus:3,hp:30,max:34,temp:0,conds:[],exh:0,mon:false,ds:[0,0]},
+ {id:8,name:"Thistle (Bard)",init:0,bonus:2,hp:22,max:29,temp:0,conds:["Charmed"],exh:0,mon:false,ds:[0,0]},
+ {id:9,name:"Grom (Barbarian)",init:0,bonus:1,hp:51,max:51,temp:0,conds:[],exh:0,mon:false,ds:[0,0]},
+ {id:10,name:"Iris (Paladin)",init:0,bonus:0,hp:40,max:42,temp:0,conds:[],exh:0,mon:false,ds:[0,0]},
+ {id:11,name:"Vex (Warlock)",init:0,bonus:2,hp:9,max:28,temp:0,conds:["Poisoned","Frightened"],exh:0,mon:false,ds:[0,0]},
+ {id:12,name:"Pell (Monk)",init:0,bonus:4,hp:33,max:33,temp:0,conds:[],exh:0,mon:false,ds:[0,0]}]});
+let DB; try{DB=JSON.parse(localStorage.getItem(KEY))}catch(e){} if(!DB||!DB.parties)DB={parties:[],cur:null};
+let S=null, sheet=null, nid=1, confirmDel=false, cdT=null;
+const P=()=>DB.parties.find(p=>p.id===DB.cur);
+function openParty(id){DB.cur=id;const p=P();S=p?p.state:null;if(!p)DB.cur=null;nid=S?Math.max(0,...S.list.map(c=>c.id))+1:1}
+openParty(DB.cur);
+// name library: every character and monster ever added, reused for suggestions
+// characters: one entry per name + table (levelling up updates it); monsters: one per name, HP stored per creature
+function remember(c,tid){tid=tid??DB.cur;if(!c.name||/^(character|monster|unnamed)( \d+)?$/i.test(c.name))return;DB.lib=DB.lib||{pc:{},mon:{}};
+  const k=c.mon?c.name.toLowerCase():c.name.toLowerCase()+"|"+tid;
+  DB.lib[c.mon?"mon":"pc"][k]=c.mon?{key:k,name:c.name,per:Math.round((c.max||1)/(c.count||1)),bonus:c.bonus||0}:{key:k,name:c.name,max:c.max,bonus:c.bonus||0,table:tid}}
+if(DB.libv!==3){DB.lib={pc:{},mon:{}};DB.parties.forEach(p=>{if(!p.demo)p.state.list.forEach(c=>remember(c,p.id))});DB.libv=3}
+let sugPer=null;
+document.addEventListener("input",e=>{if(e.target.id==="f-max")sugPer=null;
+  if(e.target.id==="f-cnt"&&sugPer){const n=Math.max(1,+e.target.value||1);document.getElementById("f-max").value=sugPer*n;document.querySelectorAll("[data-n]").forEach(b=>b.classList.toggle("on",+b.dataset.n===n))}});
+const tname=id=>DB.parties.find(p=>p.id===id)?.name;
+function showSugg(){const box=document.getElementById("sugg"),f=document.getElementById("f-name");if(!box||!f)return;
+  const q=f.value.trim().toLowerCase();const mon=!!(draft&&draft.mon);
+  if(!q){box.innerHTML="";return}
+  const here=new Set(S.list.filter(c=>!c.mon).map(c=>c.name.toLowerCase()));
+  const all=Object.values(DB.lib[mon?"mon":"pc"]).filter(e=>mon||!here.has(e.name.toLowerCase()));
+  const hit=[...all.filter(e=>e.name.toLowerCase().startsWith(q)),...all.filter(e=>!e.name.toLowerCase().startsWith(q)&&e.name.toLowerCase().includes(q))].slice(0,5);
+  box.innerHTML=hit.map(e=>`<button type="button" data-sug="${esc(e.key)}"><b>${esc(e.name)}</b><span>${mon?e.per+" HP each":e.max+" HP"} · init ${e.bonus>=0?"+":""}${e.bonus}${!mon&&tname(e.table)?" · "+esc(tname(e.table)):""}</span></button>`).join("")}
+document.addEventListener("input",e=>{if(e.target.id==="f-name"&&sheet==="new"){showSugg();updJoin()}});
+// reinforcements: a new monster with the same name can join the group already fighting
+function updJoin(){const box=document.getElementById("join"),f=document.getElementById("f-name");if(!box||!f)return;
+  const q=f.value.trim().toLowerCase();const g=q&&draft&&draft.mon&&S.inCombat?S.list.find(c=>c.mon&&c.name.toLowerCase()===q&&wound(c).alive>0):null;
+  box.innerHTML=g?`<label class="check"><input type="checkbox" id="f-join" checked> Reinforcements: join the ${esc(g.name)} ×${wound(g).alive} group already fighting (same initiative)</label>`:""}
+// prepared encounters, stored per table
+let encDraft=null,confirmEnc=false;
+const encs=()=>(P().encounters=P().encounters||[]);
+const encSum=e=>e.items.map(i=>i.name+(i.count>1?" ×"+i.count:"")).join(", ")||"No monsters yet";
+function startSheet(){const L=encs();return `<div class="sheet" id="shade"><div role="dialog" aria-label="Start fight">
+  <h2>Start fight</h2>
+  ${L.length?`<div class="tables">${L.map(e=>`<div class="encrow"><button class="trow" data-launch="${e.id}"><span class="name">${esc(e.name)}</span><span class="note">${esc(encSum(e))}</span></button><button class="encedit" data-encedit="${e.id}" aria-label="Edit ${esc(e.name)}">✎</button></div>`).join("")}</div>`:`<p class="note">No prepared encounters for this table yet. Prepare one before the session to add all its monsters in one tap.</p>`}
+  <button class="ghost" data-encedit="new">+ Prepare an encounter</button>
+  <div class="row"><button class="ghost" id="cancel">Cancel</button><button class="next" id="startfight">Fight without encounter</button></div></div></div>`}
+function syncEnc(){if(!encDraft)return;const v=id=>document.getElementById(id);if(v("e-name"))encDraft.name=v("e-name").value.trim();
+  encDraft.items.forEach((it,i)=>{if(v("e-n-"+i)){it.name=v("e-n-"+i).value.trim();it.per=Math.max(1,+v("e-h-"+i).value||1);it.bonus=+v("e-b-"+i).value||0}})}
+function encSheet(){const e=encDraft;return `<div class="sheet" id="shade"><div role="dialog" aria-label="Encounter">
+  <h2>${e.isNew?"New encounter":"Edit encounter"}</h2>
+  <label>Encounter name<input type="text" id="e-name" placeholder="Bridge ambush" value="${esc(e.name)}"></label>
+  ${e.items.map((it,i)=>`<div class="encitem"><div class="namerow"><label class="grow">Monster<input type="text" id="e-n-${i}" list="monlib" value="${esc(it.name)}"></label>
+    <div class="step"><span class="steplbl">Count</span><div class="stepbtns"><button type="button" data-estep="${i}|-1">−</button><b>×${it.count}</b><button type="button" data-estep="${i}|1">+</button></div></div></div>
+    <div class="grid3"><label>HP each<input type="number" inputmode="numeric" id="e-h-${i}" value="${it.per}"></label><label>Init bonus<input type="number" id="e-b-${i}" value="${it.bonus}"></label><label>&nbsp;<button type="button" class="ghost danger" data-erem="${i}">Remove</button></label></div></div>`).join("")}
+  <datalist id="monlib">${Object.values(DB.lib.mon).map(m=>`<option value="${esc(m.name)}">`).join("")}</datalist>
+  <button class="ghost" id="eadd">+ Add a monster</button>
+  <div class="row"><button class="ghost" id="cancel">Cancel</button><button class="next" id="encok">Save encounter</button></div>
+  ${e.isNew?"":`<button class="ghost danger" id="encdel">${confirmEnc?"Tap again to delete":"Delete encounter"}</button>`}</div></div>`}
+// change of monster name in an encounter row: fill HP and bonus from the monster list
+document.addEventListener("change",e=>{const m=/^e-n-(\d+)$/.exec(e.target.id||"");if(!m||!encDraft)return;const lib=DB.lib.mon[e.target.value.trim().toLowerCase()];
+  if(lib){document.getElementById("e-h-"+m[1]).value=lib.per;document.getElementById("e-b-"+m[1]).value=lib.bonus}});
+function launch(enc){if(!S.inCombat){S.list.forEach(c=>{if(!c.mon)c.init=1+Math.floor(Math.random()*20)+(c.bonus||0)});S.inCombat=true;S.round=1;S.turn=0}
+  const activeId=sorted()[S.turn]?.id;
+  enc.items.filter(i=>i.name).forEach(i=>{const n={id:nid++,name:i.name,mon:true,count:i.count,max:i.per*i.count,dmg:0,bonus:i.bonus,conds:[],exh:0,ds:[0,0],init:1+Math.floor(Math.random()*20)+(i.bonus||0)};S.list.push(n);remember(n)});
+  const k=sorted().findIndex(x=>x.id===activeId);S.turn=k<0?0:k}
+function newParty(name,state){const id=Date.now();DB.parties.push({id,name,state});openParty(id)}
+const blank=()=>({inCombat:false,round:1,turn:0,list:[]});
+function renderWelcome(){const ps=DB.parties;document.getElementById("app").innerHTML=`<section class="welcome">
+  <h1>Initiative Table</h1>
+  ${ps.length?`<p class="lead">Your tables</p><div class="tables">${ps.map(p=>{const n=p.state.list.filter(c=>!c.mon).length;
+    return `<button class="trow" data-open="${p.id}"><span class="name">${esc(p.name)}</span><span class="note">${n} character${n===1?"":"s"}${p.state.inCombat?" · in a fight":""}</span></button>`}).join("")}</div>`
+  :`<p class="lead">One phone in the middle of the table.<br>Tap left to lose HP, right to gain it.</p>
+  <ul><li>Your party stays saved on this phone between games.</li><li>Keep one party per table you run.</li><li>Monsters show damage taken, never their HP left.</li></ul>`}
+  <button class="next" id="create">${ps.length?"New table":"Create my party"}</button>
+  ${ps.some(p=>p.demo)?"":`<button class="ghost" id="demo">Try a demo</button>`}
+  ${DBX?`<button class="ghost" id="asplayer">Open the player screen</button>`:""}
+  ${SKIN_PICKER?`<div class="skins"><span class="steplbl">Skin</span>${Object.entries(SKINS).map(([k,v])=>`<button data-skin="${k}" class="${skin()===k?"on":""}">${v}</button>`).join("")}</div>`:""}</section>`;save()}
+const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
+const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
+const DEFAULT_SKIN="gilded";
+// the skin is remembered only once someone picks one; until then the default applies
+function skin(){if(!SKIN_PICKER)return DEFAULT_SKIN;try{return localStorage.getItem(KEY+"-skin-picked")||DEFAULT_SKIN}catch(e){return DEFAULT_SKIN}}
+function applySkin(k,picked){if(!SKINS[k])k=DEFAULT_SKIN;document.documentElement.dataset.skin=k;if(picked)try{localStorage.setItem(KEY+"-skin-picked",k)}catch(e){}}
+applySkin(skin());
+function tableSheet(){const p=P();return `<div class="sheet" id="shade"><div role="dialog" aria-label="Table settings">
+  <h2>Table</h2><label>Table name<input type="text" id="f-tname" value="${esc(p.name)}"></label>
+  ${DBX?`<button class="${P().live?"next":"ghost"}" id="livetoggle">${P().live?"Live with players · tap to stop":"Share this table live with players"}</button>
+  <p class="note">Players open this same page on their phone, signed in to Claude with edit access, and tap “Open the player screen”. They see the party and the fight and can change any HP. They never see your encounters.</p>`:""}
+  <div class="row"><button class="ghost danger" id="deltable">${confirmDel?"Tap again to delete":"Delete table"}</button><button class="next" id="tableok">Done</button></div></div></div>`}
+const save=()=>{if(ROLE!=="player"){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}schedulePush()};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sorted=()=>[...S.list].sort((a,b)=>b.init-a.init);
+function hpColor(c){return c.hp<=0?"var(--crit)":"var(--hp)"}
+function hpCls(c){return c.temp>0?"has-temp":""}
+const BAD=["Paralyzed","Petrified","Stunned","Unconscious","Incapacitated"];
+// only state shown: Unconscious, set automatically at 0 HP
+function tags(c){return !c.mon&&c.hp<=0?`<span class="tag bad">Unconscious</span>`:""}
+// death saves at 0 HP: failures in a column on the left, successes on the right
+function dcol(c,s){return `<div class="dcol ${s?"fails":"succ"}" aria-label="Death save ${s?"failures":"successes"}">${[0,1,2].map(i=>`<button class="pip ${s?"f":"s"} ${c.ds[s]>i?"on":""}" data-id="${c.id}" data-s="${s}" data-i="${i}" aria-label="${s?"Failure":"Success"} ${i+1}"></button>`).join("")}</div>`}
+// one tile per combatant: name on top (tap = details), HP or damage in the middle (left −1, right +1)
+// player characters: 4 colour tiers by quarters of max HP lost (no 10-HP steps); temp HP always sky blue
+function pcTier(c){const mx=Math.max(1,c.max||1),lost=mx-Math.max(0,c.hp);return lost<=0?0:Math.min(3,Math.ceil(lost/(mx/4))-1)}
+function tile(c,act){const w=c.mon?wound(c):null,dn=!c.mon&&c.hp<=0,pi=c.mon?0:pcTier(c);
+  return `<section class="ptile ${act?"act":""} ${c.mon?"mon":""} ${!c.mon&&c.hp<=0?"down":""}"><div class="in">${dn?dcol(c,1):""}<div class="mid">
+  <button class="phead" data-edit="${c.id}" aria-label="${esc(c.name)} details"><span class="prow">${S.inCombat?`<span class="ini">${c.init}</span>`:""}<span class="name">${c.mon?mname(c):esc(c.name)}</span>${ROLE==="player"&&c.mon?"":`<span class="edit">✎</span>`}</span>${tags(c)?`<span class="tags">${tags(c)}</span>`:""}</button>
+  <div class="bighp hpzone" data-id="${c.id}" role="group" aria-label="${esc(c.name)}: tap left −1, right +1">
+   ${c.mon?`<div class="val wound ${w.bright?"glow":""}" style="color:${w.color}">${c.dmg}<small>damage</small></div>`
+   :`<div class="val ${hpCls(c)} ${!c.temp&&pi===3?"glow":""}" ${c.temp?"":`style="color:${WCOL[pi]}"`}>${c.hp+c.temp}<small>${c.temp?`${c.hp} + ${c.temp} temp · max ${c.max}`:`of ${c.max} HP`}</small></div>`}</div></div>${dn?dcol(c,0):""}</div></section>`}
+
+function partyCard(c){return `<button class="card ${c.hp<=0?"down":""}" data-edit="${c.id}">
+     <span class="init" style="font-size:.8rem">${c.bonus>=0?"+":""}${c.bonus||0}<br><small style="font-weight:400">init</small></span><span style="min-width:0"><span class="name">${esc(c.name)}</span><span class="tags">${tags(c)}</span></span>
+     <span class="hpv ${hpCls(c)}">${c.hp+c.temp}<small>/${c.max}</small></span>
+     <span class="bar"><i style="width:${Math.max(0,Math.min(100,c.hp/c.max*100))}%;background:${hpColor(c)}"></i></span></button>`}
+function renderParty(){const pcs=S.list.filter(c=>!c.mon);
+  let h=`<header><button id="tables" aria-label="All tables">◀</button><button class="round tname" id="rename">${P().live?`<span class="livedot">●</span> `:""}${esc(P().name)} ✎</button>${awakeBtn()}<button id="add">+ Add</button></header>
+  <div class="party">${pcs.length?pcs.map(c=>tile(c,false)).join(""):`<p class="hint">No characters yet. When the players arrive, hand them the phone: each taps “+ Add” to enter their character once. You can already prepare encounters with “Start fight”.</p>`}</div>
+  ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting</p>`}
+  <div class="row"><button class="ghost" id="longrest">Long rest</button><button class="next" id="startmenu">Start fight</button></div>`;
+  if(sheet==="table")h+=tableSheet();else if(sheet==="start")h+=startSheet();else if(sheet==="enc")h+=encSheet();else if(sheet&&sheet!=="menu")h+=sheetHtml();
+  document.getElementById("app").innerHTML=h;save()}
+let lastTurn=null,keepScroll=0;
+function render(){
+  keepScroll=document.querySelector(".party")?.scrollTop||0;
+  if(ROLE==="player")return renderPlayer();
+  if(!S)return renderWelcome();
+  if(!S.inCombat)return renderParty();
+  const order=sorted(); if(S.turn>=order.length)S.turn=0;
+  const a=order[S.turn]; const rest=order.slice(S.turn+1).concat(order.slice(0,S.turn));
+  let h=`<header><div class="round">${P()?.live?`<span class="livedot">●</span> `:""}Round <b>${S.round}</b></div>
+   ${awakeBtn()}<button id="endfight">End fight</button><button id="add">+ Add</button></header>`;
+  h+=`<div class="party combat">${order.slice(S.turn).concat(order.slice(0,S.turn)).map(c=>tile(c,c===a)).join("")}</div>
+  ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting · tap a name for details</p>`}`;
+  h+=`<div class="row"><button class="ghost" id="prev">◀ Back</button><button class="next" id="next">Next turn</button></div>`;
+  if(sheet==="menu")h+=menuHtml();else if(sheet)h+=sheetHtml();
+  document.getElementById("app").innerHTML=h; save();
+  // keep the scroll position while tapping HP; jump back to the top only when the turn changes
+  const l=document.querySelector(".party.combat");if(l){const k=S.round+"|"+S.turn;if(k!==lastTurn){l.scrollTop=0;lastTurn=k}else l.scrollTop=keepScroll}
+}
+function menuHtml(){const pcs=S.list.filter(c=>!c.mon).length,mons=S.list.length-pcs;
+  return `<div class="sheet" id="shade"><div role="dialog" aria-label="Menu">
+   <h2>Between fights</h2>
+   <button class="next" id="newfight">New fight</button>
+   <p class="note">Removes ${mons} monster${mons===1?"":"s"}, back to round 1, rolls initiative for the ${pcs} player character${pcs===1?"":"s"} with their bonus. HP and conditions are kept. Tap an Init badge to enter a rolled score instead.</p>
+   <button class="ghost" id="longrest">Long rest</button>
+   <p class="note">All player characters: full HP, no temp HP, conditions and death saves cleared, Exhaustion −1.</p>
+   <button class="ghost" id="close">Close</button></div></div>`}
+function sheetHtml(){
+  const isNew=sheet==="new";
+  const c=isNew?{name:"",init:10,hp:10,max:10,temp:0,dmg:0,conds:[],exh:0,ds:[0,0],...(draft||{})}:S.list.find(x=>x.id===sheet);
+  const m=!!c.mon;
+  const N=(id,lbl,val,hint)=>`<label>${lbl}<input type="number" inputmode="numeric" enterkeyhint="${hint||"next"}" id="${id}" value="${val}"></label>`;
+  const B=(val,hint)=>`<label>Init bonus<input type="number" enterkeyhint="${hint||"next"}" id="f-bonus" value="${val}"></label>`;
+  const NAME=(extra)=>`<label class="grow">Name<input type="text" id="f-name" enterkeyhint="next" autocomplete="off" ${extra||""} value="${esc(c.name)}"></label>`;
+  const G=n=>`<div class="step"><span class="steplbl">Group</span><div class="stepbtns"><button type="button" data-step="-1" aria-label="One fewer">−</button><b id="cnt-lbl">×${n}</b><button type="button" data-step="1" aria-label="One more">+</button></div><input type="hidden" id="f-cnt" value="${n}"></div>`;
+  const NR=()=>m?`<div class="namerow">${NAME(isNew?'placeholder="Goblin"':"")}${G(c.count||1)}</div>`:NAME(isNew?'placeholder="Character name"':"");
+  const INIT=(val,hint)=>`<div class="grid3"><label>Initiative<input type="number" inputmode="numeric" enterkeyhint="next" id="f-init" placeholder="auto" value="${val}"></label>${B(c.bonus||0,hint)}<label>Roll<button type="button" id="roll" class="rollbtn" aria-label="Roll d20 plus bonus"><svg class="d20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 21.5 7v10L12 22.5 2.5 17V7z"/><path d="M12 6.5l5.5 9h-11z"/><path d="M12 6.5 2.5 7M12 6.5 21.5 7M6.5 15.5 2.5 7M6.5 15.5 2.5 17M6.5 15.5 12 22.5M17.5 15.5 21.5 7M17.5 15.5 21.5 17M17.5 15.5 12 22.5M12 1.5v5"/></svg> d20</button></label></div>`;
+  if(isNew)return `<div class="sheet" id="shade"><div role="dialog" aria-label="Add">
+   <h2>${S.inCombat?"Add combatant":"Add character"}</h2>
+   ${ROLE!=="player"&&S.inCombat&&encs().length?`<div class="launchrow"><span class="steplbl">Launch an encounter</span>${encs().map(e=>`<button type="button" data-launch="${e.id}">${esc(e.name)}</button>`).join("")}</div>`:""}
+   ${S.inCombat&&ROLE!=="player"?`<div class="row"><button type="button" class="ghost ${!m?"pick":""}" data-kind="pc">Player character</button><button type="button" class="ghost ${m?"pick":""}" data-kind="mon">Monster</button></div>`:""}
+   ${NR()}
+   <div id="sugg" class="sugg"></div><div id="join"></div>
+   ${S.inCombat?INIT(""):""}
+   ${m?`<div class="grid3">${N("f-max","Max HP (total)",c.max||"","done")}<span></span><span></span></div>
+     <p class="note">Group: one initiative, one shared damage pool. Each creature has total ÷ group size HP. Leave Initiative empty to roll it.</p>`
+    :`<div class="grid3">${N("f-max","Max HP",c.max||"",S.inCombat?"done":"next")}${S.inCombat?"<span></span>":B(c.bonus||0,"done")}<span></span></div>`}
+   <div class="row"><button class="ghost" id="cancel">Cancel</button><button class="ghost" id="okmore">Add another</button><button class="next" id="ok">${S.inCombat?"Add":"Done"}</button></div>
+  </div></div>`;
+  return `<div class="sheet" id="shade"><div role="dialog" aria-label="Edit">
+   <h2>${esc(c.name)}</h2>
+   ${ROLE!=="player"&&S.inCombat?`<div class="row"><button type="button" class="ghost ${!m?"pick":""}" data-kind="pc">Player character</button><button type="button" class="ghost ${m?"pick":""}" data-kind="mon">Monster</button></div>`:""}
+   ${!m&&c.hp<=0?`<p class="note">At 0 HP: track death saves on the main screen.</p>`:""}
+   ${NR()}
+   ${INIT(c.init)}
+   <div class="grid3">${m?`${N("f-max","Max HP (total)",c.max||10)}${N("f-dmg","Damage",c.dmg||0,"done")}<span></span>`
+     :`${N("f-hp","HP",c.hp)}${N("f-max","Max HP",c.max)}${N("f-temp","Temp HP",c.temp,"done")}`}</div>
+   ${m?`<p class="note">Max HP is the group's total; it stays off the table view.</p>`:""}
+   <div class="row"><button class="ghost" id="cancel">Cancel</button><button class="next" id="ok">Done</button></div>
+   ${ROLE==="player"?"":`<button class="ghost danger" id="del">${S.inCombat?"Remove from combat":"Remove from party"}</button>`}
+  </div></div>`;
+}
+let draft=null,confirmNew=false,cnT=null;
+function cur(){if(sheet==="new"){draft=draft||{conds:[],exh:0,mon:false};return draft}return S.list.find(x=>x.id===sheet)}
+function readForm(c){const v=id=>document.getElementById(id),has=id=>!!v(id),num=id=>+v(id).value||0;
+  if(has("f-name"))c.name=v("f-name").value.trim();
+  if(has("f-init"))c.init=num("f-init");
+  if(has("f-bonus"))c.bonus=num("f-bonus");
+  if(has("f-max")&&v("f-max").value!=="")c.max=Math.max(1,num("f-max"));
+  if(has("f-cnt"))c.count=Math.max(1,Math.round(num("f-cnt"))||1);
+  if(has("f-dmg"))c.dmg=Math.max(0,num("f-dmg"));
+  if(has("f-hp"))c.hp=Math.min(c.max||1,num("f-hp"));
+  if(has("f-temp"))c.temp=Math.max(0,num("f-temp"))}
+function changeHp(c,d){
+  if(c.mon){c.dmg=Math.max(0,Math.min(c.max||1,(c.dmg||0)+d));return}
+  if(d<0&&c.temp>0){const t=Math.min(c.temp,-d);c.temp-=t;d+=t}
+  c.hp=Math.max(0,Math.min(c.max,c.hp+d));
+  if(c.hp>0)c.ds=[0,0];
+  if(c.hp<=0&&!c.conds.includes("Unconscious"))c.conds.push("Unconscious");
+  if(c.hp>0)c.conds=c.conds.filter(x=>x!=="Unconscious");
+}
+// HP zone: left half −1, right half +1; hold repeats continuously
+let holdT=null,repT=null;
+function stopHold(){clearTimeout(holdT);clearInterval(repT);holdT=repT=null}
+let HINTED=false;try{HINTED=localStorage.getItem(KEY+"-hinted")==="1"}catch(e){}
+function hpStep(d,id){const a=S.list.find(x=>x.id===id);if(!a)return;if(!HINTED){HINTED=true;try{localStorage.setItem(KEY+"-hinted","1")}catch(e){}}changeHp(a,d);render()}
+document.addEventListener("pointerdown",e=>{const z=e.target.closest(".hpzone");if(!z||sheet)return;e.preventDefault();const id=+z.dataset.id;
+  const r=z.getBoundingClientRect();const rot=getComputedStyle(document.getElementById("app")).transform!=="none";
+  const pos=rot?(r.bottom-e.clientY)/r.height:(e.clientX-r.left)/r.width;const d=pos<.5?-1:1;
+  stopHold();hpStep(d,id);holdT=setTimeout(()=>{repT=setInterval(()=>hpStep(d,id),110)},400)});
+["pointerup","pointercancel","pointerleave"].forEach(ev=>document.addEventListener(ev,stopHold));
+document.addEventListener("click",e=>{
+  const t=e.target, a=S?sorted()[S.turn]:null;
+  const op=t.closest("[data-open]"); if(op){openParty(+op.dataset.open);render();return}
+  if(t.id==="tables"){DB.cur=null;S=null;sheet=null;render();return}
+  if(t.closest("#rename")){sheet="table";confirmDel=false;render();return}
+  if(t.id==="livetoggle"){P().name=document.getElementById("f-tname").value.trim()||P().name;setLive(!P().live);return}
+  if(t.id==="asplayer"){setRole("player");return}
+  const sk=t.closest("[data-skin]");if(sk&&sk.tagName==="BUTTON"){applySkin(sk.dataset.skin,true);render();return}
+  if(t.id==="asgm"){setRole("gm");return}
+  if(t.id==="tableok"){P().name=document.getElementById("f-tname").value.trim()||P().name;sheet=null;render();return}
+  if(t.id==="deltable"){if(!confirmDel){P().name=document.getElementById("f-tname").value.trim()||P().name;confirmDel=true;render();clearTimeout(cdT);cdT=setTimeout(()=>{confirmDel=false;if(sheet==="table")render()},3000);return}
+    confirmDel=false;DB.parties=DB.parties.filter(p=>p.id!==DB.cur);DB.cur=null;S=null;sheet=null;render();return}
+  if(sheet==="table"&&t.id!=="shade")return;
+  if(t.id==="startmenu"){sheet="start";render();return}
+  const la=t.closest("[data-launch]");if(la){const e=encs().find(x=>x.id===+la.dataset.launch);if(e)launch(e);sheet=null;draft=null;render();return}
+  const ee=t.closest("[data-encedit]");if(ee){const id=ee.dataset.encedit;const src=id==="new"?null:encs().find(x=>x.id===+id);
+    encDraft=src?{...JSON.parse(JSON.stringify(src)),isNew:false}:{id:Date.now(),name:"",items:[{name:"",per:7,count:1,bonus:0}],isNew:true};confirmEnc=false;sheet="enc";render();return}
+  if(sheet==="enc"){
+    const es=t.closest("[data-estep]");if(es){syncEnc();const [i,d]=es.dataset.estep.split("|").map(Number);const it=encDraft.items[i];it.count=Math.max(1,it.count+d);render();return}
+    const er=t.closest("[data-erem]");if(er){syncEnc();encDraft.items.splice(+er.dataset.erem,1);render();return}
+    if(t.id==="eadd"){syncEnc();encDraft.items.push({name:"",per:7,count:1,bonus:0});render();document.getElementById("e-n-"+(encDraft.items.length-1))?.focus();return}
+    if(t.id==="encok"){syncEnc();const e=encDraft;e.name=e.name||"Encounter "+(encs().length+(e.isNew?1:0));e.items=e.items.filter(i=>i.name);
+      e.items.forEach(i=>remember({name:i.name,mon:true,max:i.per,count:1,bonus:i.bonus}));delete e.isNew;
+      const L=encs(),k=L.findIndex(x=>x.id===e.id);if(k<0)L.push(e);else L[k]=e;encDraft=null;sheet="start";render();return}
+    if(t.id==="encdel"){if(!confirmEnc){syncEnc();confirmEnc=true;render();return}P().encounters=encs().filter(x=>x.id!==encDraft.id);encDraft=null;confirmEnc=false;sheet="start";render();return}
+    if(t.id==="cancel"||t.id==="shade"){encDraft=null;sheet="start";render();return}
+    return}
+  const pip=t.closest(".pip"); if(pip){const w=S.list.find(x=>x.id===+pip.dataset.id);const s=+pip.dataset.s,i=+pip.dataset.i;w.ds[s]=w.ds[s]>i?i:i+1;render();return}
+  const sg=t.closest("[data-sug]"); if(sg){const e=DB.lib[draft&&draft.mon?"mon":"pc"][sg.dataset.sug];if(!e)return;const set=(id,v)=>{const f=document.getElementById(id);if(f)f.value=v};
+    set("f-name",e.name);set("f-bonus",e.bonus);
+    if(e.per){const n=+(document.getElementById("f-cnt")?.value)||1;sugPer=e.per;set("f-max",e.per*n)}else set("f-max",e.max);
+    document.getElementById("sugg").innerHTML="";updJoin();document.getElementById("f-max")?.focus();return}
+  const st=t.closest("[data-step]"); if(st){const f=document.getElementById("f-cnt");const n=Math.max(1,(+f.value||1)+ +st.dataset.step);f.value=n;
+    document.getElementById("cnt-lbl").textContent="×"+n;if(sugPer)document.getElementById("f-max").value=Math.round(sugPer*n);return}
+  const chip=t.closest("[data-n]"); if(chip){const f=document.getElementById("f-cnt");f.value=chip.dataset.n;if(sugPer)document.getElementById("f-max").value=sugPer*chip.dataset.n;document.querySelectorAll("[data-n]").forEach(b=>b.classList.toggle("on",b===chip));return}
+  if(t.id==="next"){S.turn++;if(S.turn>=S.list.length){S.turn=0;S.round++}render();return}
+  if(t.id==="prev"){S.turn--;if(S.turn<0){if(S.round>1){S.round--;S.turn=S.list.length-1}else S.turn=0}render();return}
+  if(t.id==="add"){sheet="new";draft={conds:[],exh:0,mon:!!S.inCombat&&ROLE!=="player"};sugPer=null;render();return}
+  const ed=t.closest("[data-edit]"); if(ed&&ROLE==="player"&&S.list.find(x=>x.id===+ed.dataset.edit)?.mon)return; if(ed&&!sheet){sheet=+ed.dataset.edit;const cc=S.list.find(x=>x.id===sheet);sugPer=cc&&cc.mon?(cc.max||1)/(cc.count||1):null;render();return}
+  if(t.id==="create"){newParty("Table "+(DB.parties.filter(p=>!p.demo).length+1),blank());sheet="table";confirmDel=false;render();const f=document.getElementById("f-tname");f?.focus();f?.select();return}
+  if(t.id==="demo"){newParty("Demo table",sample());P().demo=true;P().encounters=[{id:1,name:"Bridge ambush",items:[{name:"Goblin",per:7,count:4,bonus:2},{name:"Goblin chief",per:21,count:1,bonus:2}]}];render();return}
+  if(t.id==="cleardemo"){const p=P();p.demo=false;p.name="Table "+DB.parties.filter(x=>!x.demo).length;p.state=blank();openParty(p.id);sheet="new";draft=null;render();document.getElementById("f-name")?.focus();return}
+  if(t.id==="shade"||t.id==="close"||t.id==="cancel"){sheet=null;draft=null;render();return}
+  if(t.id==="menu"){sheet="menu";render();return}
+  if(t.id==="startfight"){S.list.forEach(c=>{if(!c.mon)c.init=1+Math.floor(Math.random()*20)+(c.bonus||0)});
+    S.inCombat=true;S.round=1;S.turn=0;sheet=null;render();return}
+  if(t.id==="endfight"){S.list=S.list.filter(c=>!c.mon);S.inCombat=false;S.round=1;S.turn=0;sheet=null;render();return}
+  if(t.id==="longrest"){S.list.forEach(c=>{if(c.mon)return;c.hp=c.max;c.temp=0;c.conds=[];c.ds=[0,0];c.exh=Math.max(0,(c.exh||0)-1)});sheet=null;render();return}
+  if(!sheet||sheet==="menu"||sheet==="table")return;
+  const c=cur();
+  if(t.dataset.c){if(sheet!=="new")readForm(c);const x=t.dataset.c;c.conds=c.conds.includes(x)?c.conds.filter(y=>y!==x):[...c.conds,x];keepForm(()=>render());return}
+  if(t.dataset.x){if(sheet!=="new")readForm(c);const i=+t.dataset.x;c.exh=c.exh===i?i-1:i;keepForm(()=>render());return}
+  if(t.dataset.kind){readForm(c);const toMon=t.dataset.kind==="mon";
+    // changing an existing sheet's type: PC HP lost becomes monster damage, and back
+    if(sheet!=="new"&&!!c.mon!==toMon){if(toMon){c.dmg=Math.max(0,(c.max||1)-(c.hp||0));c.count=1;c.temp=0}
+      else{const per=Math.max(1,Math.round((c.max||1)/(c.count||1)));c.max=per;c.hp=Math.max(0,per-((c.count||1)>1?0:(c.dmg||0)));c.temp=0;c.ds=[0,0];c.count=1}
+      sugPer=toMon?(c.max||1):null}
+    c.mon=toMon;if(c.mon){if(c.dmg==null)c.dmg=0;if(c.count==null)c.count=1;if(c.max==null)c.max=10}else{if(c.max==null)c.max=10;if(c.hp==null)c.hp=c.max;if(c.temp==null)c.temp=0}render();return}
+  if(t.id==="roll"){const r=1+Math.floor(Math.random()*20);document.getElementById("f-init").value=r+(+document.getElementById("f-bonus").value||0);return}
+  if(t.id==="ok"||t.id==="okmore"){const more=t.id==="okmore";let keepMon=false;
+    const iv=document.getElementById("f-init")?.value;
+    if(sheet==="new"){const n={id:ROLE==="player"?Date.now()%1e9+Math.floor(Math.random()*1000):nid++,temp:0,dmg:0,max:10,count:1,bonus:0,conds:[],exh:0,ds:[0,0],mon:false,...draft};readForm(n);keepMon=n.mon;
+      if(!n.name){const k=S.list.filter(x=>x.mon===n.mon).length+1;n.name=(n.mon?"Monster ":"Character ")+k}
+      if(!n.mon)n.hp=n.max;remember(n);
+      const g=n.mon&&document.getElementById("f-join")?.checked?S.list.find(c=>c.mon&&c.name.toLowerCase()===n.name.toLowerCase()&&wound(c).alive>0):null;
+      if(g){const per=(g.max||1)/(g.count||1),dead=(g.count||1)-wound(g).alive;g.count+=n.count;g.max=Math.round(per*g.count);
+        sugPer=null;sheet=more?"new":null;draft=more?{conds:[],exh:0,mon:true}:null;render();return}
+      n.init=!S.inCombat?0:(iv!==""&&iv!=null?+iv:1+Math.floor(Math.random()*20)+(n.bonus||0));
+      const activeId=sorted()[S.turn]?.id;S.list.push(n);S.turn=Math.max(0,sorted().findIndex(x=>x.id===activeId))}
+    else{readForm(c);if(!c.name)c.name="Unnamed";remember(c)}
+    sugPer=null;sheet=more?"new":null;draft=more?{conds:[],exh:0,mon:keepMon}:null;render();if(more)document.getElementById("f-name")?.focus();return}
+  if(t.id==="del"){const activeId=sorted()[S.turn]?.id;S.list=S.list.filter(x=>x.id!==sheet);sheet=null;
+    const i=sorted().findIndex(x=>x.id===activeId);S.turn=i<0?0:i;render();return}
+});
+// Enter moves to the next field; on the last field it adds and opens a blank form
+document.addEventListener("keydown",e=>{if(e.key!=="Enter"||!e.target.closest(".sheet input"))return;e.preventDefault();
+  const ins=[...document.querySelectorAll(".sheet input:not([type=hidden])")];const i=ins.indexOf(e.target);
+  if(i<ins.length-1){ins[i+1].focus();ins[i+1].select?.()}else(document.getElementById("okmore")||document.getElementById("ok")||document.getElementById("encok"))?.click()});
+// preserve typed values while toggling chips in the "new" sheet
+function keepForm(fn){const ids=["f-name","f-init","f-hp","f-max","f-temp","f-dmg","f-cnt","f-bonus"];const vals={};
+  ids.forEach(i=>{const el=document.getElementById(i);if(el)vals[i]=el.value});
+  fn();ids.forEach(i=>{const el=document.getElementById(i);if(el&&vals[i]!==undefined)el.value=vals[i]})}
+// ---------- live sync (player screen) ----------
+// shared docs: meta/live = which table is live + round/turn; live/<id> = one doc per combatant.
+// GM data (tables, encounters, monster list) stays on the GM's phone and is never shared.
+let DBX=null,IS_OWNER=true,ROLE="gm",REM={meta:null,docs:[]},lastSent={},lastMeta="",pushT=null,pushing=false,again=false;
+const PS={inCombat:false,round:1,turn:0,list:[]};
+try{if(localStorage.getItem(KEY+"-role")==="player")ROLE="player"}catch(e){}
+const ser=o=>JSON.stringify(o,Object.keys(o).sort());
+// shared data is written by other people: never trust it. Keep only known fields, force types and bounds.
+const num=(v,d=0,lo=-9999,hi=99999)=>{v=Number(v);return Number.isFinite(v)?Math.max(lo,Math.min(hi,Math.round(v))):d};
+const str=(v,n)=>String(v??"").replace(/[\u0000-\u001f]/g,"").slice(0,n);
+function clean(r){r=r||{};const ds=Array.isArray(r.ds)?r.ds:[];
+  return {id:num(r.id,0,0,4e9),name:str(r.name,60),mon:r.mon===true,init:num(r.init),bonus:num(r.bonus,0,-99,99),hp:num(r.hp),max:num(r.max,1,1),temp:num(r.temp,0,0),
+    dmg:num(r.dmg,0,0),count:num(r.count,1,1,99),conds:[],exh:0,ds:[num(ds[0],0,0,3),num(ds[1],0,0,3)]}}
+function cleanMeta(m){m=m||{};const id=Number(m.tableId);
+  return {tableId:Number.isFinite(id)&&id>0?id:null,tableName:str(m.tableName,60),inCombat:m.inCombat===true,round:num(m.round,1,1),turn:num(m.turn,0,0,999)}}
+function schedulePush(){if(!DBX)return;clearTimeout(pushT);pushT=setTimeout(push,250)}
+async function push(){if(!DBX)return;if(pushing){again=true;return}pushing=true;
+  try{let list,meta;
+    if(ROLE==="player"){if(!REM.meta||!REM.meta.tableId)return;list=PS.list;meta={...REM.meta,round:PS.round,turn:PS.turn}}
+    else{const p=P();if(!S||!p||!p.live)return;list=S.list;meta={tableId:DB.cur,tableName:p.name,inCombat:!!S.inCombat,round:S.round,turn:S.turn}}
+    const sm=ser(meta);if(sm!==lastMeta){lastMeta=sm;await DBX.doc("meta/live").set(meta)}
+    for(const c0 of list){const c=clean(c0),s=ser(c);if(s!==lastSent[c.id]){lastSent[c.id]=s;await DBX.doc("live/"+c.id).set(c)}}
+    if(ROLE!=="player")for(const id of Object.keys(lastSent))if(!list.some(c=>String(c.id)===id)){delete lastSent[id];await DBX.doc("live/"+id).delete()}
+  }catch(e){console.warn("sync",e)}finally{pushing=false;if(again){again=false;schedulePush()}}}
+// merge remote combatants into a local list without undoing our own unsent changes
+function mergeRemote(local,docs){const by=new Map(local.map(c=>[c.id,c])),out=[];
+  for(const r of docs){const s=ser(r),l=by.get(r.id);by.delete(r.id);
+    if(l){if(s===lastSent[r.id]||s===ser(clean(l)))out.push(l);else{out.push(r);lastSent[r.id]=s}}
+    else if(ROLE==="player"||lastSent[r.id]===undefined){out.push(r);lastSent[r.id]=s}}
+  // the GM is the only one who adds or removes combatants: keep his local ones, players follow the remote list
+  if(ROLE!=="player")for(const l of by.values())out.push(l);
+  return out}
+function onRemote(){
+  if(ROLE==="player"){PS.list=mergeRemote(PS.list,REM.docs);
+    if(REM.meta){const sm=ser(REM.meta);if(sm!==lastMeta){lastMeta=sm;PS.inCombat=!!REM.meta.inCombat;PS.round=REM.meta.round||1;PS.turn=REM.meta.turn||0}}
+    if(!sheet)render();return}
+  const p=P();if(!S||!p||!p.live||!REM.meta||REM.meta.tableId!==DB.cur)return;
+  S.list=mergeRemote(S.list,REM.docs);
+  const sm=ser(REM.meta);if(sm!==lastMeta){lastMeta=sm;S.round=REM.meta.round||1;S.turn=REM.meta.turn||0;S.inCombat=!!REM.meta.inCombat}
+  if(!sheet)render()}
+async function setLive(on){if(!DBX||!S)return;const p=P();DB.parties.forEach(x=>x.live=false);lastSent={};lastMeta="";
+  if(on){p.live=true;for(const r of REM.docs)if(!S.list.some(c=>c.id===r.id))await DBX.doc("live/"+r.id).delete().catch(()=>{})}
+  else await DBX.doc("meta/live").set({tableId:null}).catch(()=>{});
+  render()}
+function setRole(r){ROLE=r;try{localStorage.setItem(KEY+"-role",r)}catch(e){}lastSent={};lastMeta="";sheet=null;
+  if(r==="player"){PS.list=[];onRemote()}else{openParty(DB.cur);render()}}
+function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
+  if(!DBX){app.innerHTML=`<section class="welcome"><h1>Initiative Table</h1><p class="lead">Player screen</p><p class="note">Sign in to Claude with access to this page to follow your table.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
+  if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initiative Table</h1><p class="lead">Player screen</p><p class="note">Waiting for the GM to share a table live. This screen updates on its own.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
+  S=PS;const order=sorted();if(S.turn>=order.length)S.turn=0;const a=order[S.turn];
+  const shown=S.inCombat?order.slice(S.turn).concat(order.slice(0,S.turn)):S.list.filter(c=>!c.mon);
+  app.innerHTML=`<header><div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${IS_OWNER?`<button id="asgm">GM view</button>`:""}${awakeBtn()}<button id="add">+ Add</button></header>
+  <div class="party ${S.inCombat?"combat":""}">${shown.length?shown.map(c=>tile(c,S.inCombat&&c===a)).join(""):`<p class="hint">No characters at this table yet. Tap “+ Add” to enter yours.</p>`}</div>
+  ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting</p>`}
+  ${S.inCombat?`<div class="row"><button class="ghost" id="prev">◀ Back</button><button class="next" id="next">Next turn</button></div>`:""}
+  ${sheet&&sheet!=="table"&&sheet!=="start"&&sheet!=="enc"?sheetHtml():""}`;
+  const l=document.querySelector(".party.combat");if(l){const k=S.round+"|"+S.turn;if(k!==lastTurn){l.scrollTop=0;lastTurn=k}else l.scrollTop=keepScroll}
+  schedulePush()}
+(async()=>{try{if(!window.claude||!window.claude.use)return;const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+  if(user)IS_OWNER=await user.isOwner();if(!IS_OWNER)ROLE="player";if(!db){render();return}DBX=db;
+  DBX.doc("meta/live").onSnapshot(s=>{REM.meta=s.exists?cleanMeta(s.data()):null;onRemote()},e=>console.warn("meta",e));
+  DBX.collection("live").onSnapshot(q=>{REM.docs=q.docs.map(d=>clean(d.data())).filter(c=>c.id>0).slice(0,60);onRemote()},e=>console.warn("live",e));
+  render()}catch(e){console.warn("cloud",e)}})();
+// ---------- keep screen on + eco standby ----------
+// When "keep screen on" is active, the phone never locks; after ECO_MS without a tap the app shows a near-black
+// standby screen (OLED pixels off) with the round and whose turn it is. Any tap wakes it without changing anything.
+const ECO_MS=3*60*1000;let KEEP=false,WL=null,wakeFailed=false,ecoT=null;
+try{KEEP=localStorage.getItem(KEY+"-awake")==="1"}catch(e){}
+function awakeBtn(){return `<button id="awake" class="iconbtn ${KEEP?(wakeFailed?"warn":"on"):""}" aria-pressed="${KEEP}" aria-label="Keep screen on" title="${KEEP?(wakeFailed?"This browser refused to keep the screen on":"Screen stays on, eco standby after 3 min"):"Keep screen on"}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button>`}
+async function wake(){if(!KEEP||WL||document.visibilityState!=="visible")return;
+  try{WL=await navigator.wakeLock.request("screen");wakeFailed=false;WL.addEventListener("release",()=>{WL=null})}catch(e){wakeFailed=true}
+  refreshAwake()}
+function refreshAwake(){const b=document.getElementById("awake");if(b)b.outerHTML=awakeBtn()}
+function setKeep(on){KEEP=on;try{localStorage.setItem(KEY+"-awake",on?"1":"0")}catch(e){}
+  if(on)wake();else{WL?.release().catch(()=>{});WL=null;wakeFailed=false;hideEco()}refreshAwake();armEco()}
+const eco=document.createElement("div");eco.id="eco";eco.hidden=true;document.body.appendChild(eco);
+function showEco(){if(!KEEP||sheet)return;const a=S&&S.inCombat?sorted()[S.turn]:null;
+  eco.innerHTML=`<div class="ecoin"><b>${S&&S.inCombat?"Round "+S.round:"Standby"}</b>${a?`<span>${esc(a.mon?a.name:a.name)}’s turn</span>`:""}<small>Tap to wake</small></div>`;eco.hidden=false}
+function hideEco(){eco.hidden=true}
+function armEco(){clearTimeout(ecoT);if(KEEP)ecoT=setTimeout(showEco,ECO_MS)}
+// a tap on the standby screen only wakes it; it never reaches the HP zones underneath
+eco.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();hideEco();armEco()},true);
+eco.addEventListener("click",e=>{e.stopPropagation()},true);
+["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,()=>{if(eco.hidden)armEco()},true));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")wake()});
+document.addEventListener("click",e=>{if(e.target.closest("#awake")){e.stopImmediatePropagation();setKeep(!KEEP)}},true);
+if(KEEP){wake();armEco()}
+try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock("portrait").catch(()=>{})}catch(e){}
+render();
+</script>
+
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+<!-- Monster and rules data, when added, come from the SRD 5.2.1 by Wizards of the Coast LLC, licensed under CC-BY-4.0. -->
+</body>
+</html>
