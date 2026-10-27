@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Initable</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Barlow+Semi+Condensed:wght@400;600;700&display=swap">
 <style>
 /* Layout: one locked portrait column — active combatant as a large card, the rest of the turn order below */
@@ -186,6 +187,9 @@ header{min-width:0}header button{white-space:nowrap}
 .hpmini::before,.hpmini::after{position:absolute;top:50%;transform:translateY(-50%);color:var(--line);font-weight:700;font-size:1.1rem}
 .hpmini::before{content:"−";left:8px}.hpmini::after{content:"+";right:8px}
 .livedot{color:var(--hp)}
+.share{display:flex;gap:12px;align-items:center}.qr{width:150px;flex:none;background:#fff;border-radius:8px;padding:4px}.qr svg{display:block;width:100%;height:auto}
+.sharetxt{display:flex;flex-direction:column;gap:6px;min-width:0}.code{font-size:1.25rem;letter-spacing:.06em;word-break:break-all;color:var(--accent);font-variant-numeric:tabular-nums}
+.joinrow{display:flex;gap:8px}.joinrow input{flex:1;min-width:0;font:inherit;font-size:1.2rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px}
 /* combat: player characters keep a full tile (name on top, HP below); monsters get a slim one-line tile; the list scrolls instead of shrinking */
 .party.combat .ptile:not(.mon){flex:1 0 104px;min-height:104px}
 .party.combat .ptile.mon{flex:0 0 58px;min-height:58px}
@@ -244,7 +248,7 @@ const CONDS=["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitat
 const KEY="initiative-table-v8";
 const WCOL=["var(--w1)","var(--w2)","var(--w3)","var(--w4)"];
 // wound tiers: one tier per 10 max HP (max 4); steps of 10 up to 40 max HP, quarters above
-function wound(c){const n=Math.max(1,c.count||1),mx=Math.max(1,(c.max||1)/n),d=c.dmg||0;
+function wound(c){if(c.max==null&&c.tier!=null)return {alive:c.alive??1,color:WCOL[c.tier]||WCOL[0],bright:c.tier===3};const n=Math.max(1,c.count||1),mx=Math.max(1,(c.max||1)/n),d=c.dmg||0;
   const dead=Math.min(n,Math.floor(d/mx)),alive=n-dead,curD=alive?d-dead*mx:mx;
   const tiers=Math.min(4,Math.ceil(mx/10)),step=mx<=40?10:mx/4;
   const i=curD<=0?0:Math.min(tiers-1,Math.ceil(curD/step)-1);
@@ -337,8 +341,8 @@ function applySkin(k,picked){if(!SKINS[k])k=DEFAULT_SKIN;document.documentElemen
 applySkin(skin());
 function tableSheet(){const p=P();return `<div class="sheet" id="shade"><div role="dialog" aria-label="Table settings">
   <h2>Table</h2><label>Table name<input type="text" id="f-tname" value="${esc(p.name)}"></label>
-  ${DBX?`<button class="${P().live?"next":"ghost"}" id="livetoggle">${P().live?"Live with players · tap to stop":"Share this table live with players"}</button>
-  <p class="note">Players open this same page on their phone, signed in to Claude with edit access, and tap “Open the player screen”. They see the party and the fight and can change any HP. They never see your encounters.</p>`:""}
+  ${shareBlock()}${DBX?`<button class="${P().live?"next":"ghost"}" id="livetoggle">${P().live?"Live with players · tap to stop":"Share this table live with players"}</button>
+  ${FB?"":`<p class="note">Players open this same page on their phone, signed in to Claude with edit access, and tap “Open the player screen”. They see the party and the fight and can change any HP. They never see your encounters.</p>`}`:""}
   <div class="row"><button class="ghost danger" id="deltable">${confirmDel?"Tap again to delete":"Delete table"}</button><button class="next" id="tableok">Done</button></div></div></div>`}
 const save=()=>{if(ROLE!=="player"){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}schedulePush()};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -444,7 +448,7 @@ function readForm(c){const v=id=>document.getElementById(id),has=id=>!!v(id),num
   if(has("f-hp"))c.hp=Math.min(c.max||1,num("f-hp"));
   if(has("f-temp"))c.temp=Math.max(0,num("f-temp"))}
 function changeHp(c,d){
-  if(c.mon){c.dmg=Math.max(0,Math.min(c.max||1,(c.dmg||0)+d));return}
+  if(c.mon){const v=Math.max(0,(c.dmg||0)+d);c.dmg=c.max!=null?Math.min(c.max,v):v;return}
   if(d<0&&c.temp>0){const t=Math.min(c.temp,-d);c.temp-=t;d+=t}
   c.hp=Math.max(0,Math.min(c.max,c.hp+d));
   if(c.hp>0)c.ds=[0,0];
@@ -468,6 +472,9 @@ document.addEventListener("click",e=>{
   if(t.closest("#rename")){sheet="table";confirmDel=false;render();return}
   if(t.id==="livetoggle"){P().name=document.getElementById("f-tname").value.trim()||P().name;setLive(!P().live);return}
   if(t.id==="asplayer"){setRole("player");return}
+  if(t.id==="joinroom"){const v=(document.getElementById("f-room").value||"").trim().toUpperCase();if(!/^[A-Z0-9]{6,12}$/.test(v))return;
+    try{localStorage.setItem(KEY+"-room",v)}catch(e){}connectRoom(v);render();return}
+  if(t.id==="copylink"){const u=joinUrl(P().room.id);navigator.clipboard?.writeText(u).then(()=>{t.textContent="Link copied"}).catch(()=>{t.textContent=u});return}
   const sk=t.closest("[data-skin]");if(sk&&sk.tagName==="BUTTON"){applySkin(sk.dataset.skin,true);render();return}
   if(t.id==="asgm"){setRole("gm");return}
   if(t.id==="tableok"){P().name=document.getElementById("f-tname").value.trim()||P().name;sheet=null;render();return}
@@ -553,24 +560,33 @@ const ser=o=>JSON.stringify(o,Object.keys(o).sort());
 // shared data is written by other people: never trust it. Keep only known fields, force types and bounds.
 const num=(v,d=0,lo=-9999,hi=99999)=>{v=Number(v);return Number.isFinite(v)?Math.max(lo,Math.min(hi,Math.round(v))):d};
 const str=(v,n)=>String(v??"").replace(/[\u0000-\u001f]/g,"").slice(0,n);
-function clean(r){r=r||{};const ds=Array.isArray(r.ds)?r.ds:[];
-  return {id:num(r.id,0,0,4e9),name:str(r.name,60),mon:r.mon===true,init:num(r.init),bonus:num(r.bonus,0,-99,99),hp:num(r.hp),max:num(r.max,1,1),temp:num(r.temp,0,0),
-    dmg:num(r.dmg,0,0),count:num(r.count,1,1,99),conds:[],exh:0,ds:[num(ds[0],0,0,3),num(ds[1],0,0,3)]}}
+// Shared combatant: never trust what other phones send. Monsters travel WITHOUT max HP:
+// players get only the damage, the wound colour tier and how many creatures are still standing.
+function clean(r){r=r||{};const ds=Array.isArray(r.ds)?r.ds:[];const mon=r.mon===true;
+  const o={id:num(r.id,0,0,4e9),name:str(r.name,60),mon,init:num(r.init),bonus:num(r.bonus,0,-99,99),hp:num(r.hp),temp:num(r.temp,0,0),
+    dmg:num(r.dmg,0,0),count:num(r.count,1,1,99),conds:[],exh:0,ds:[num(ds[0],0,0,3),num(ds[1],0,0,3)]};
+  if(mon){o.tier=num(r.tier,0,0,3);o.alive=num(r.alive,1,0,99)}else o.max=num(r.max,1,1);
+  return o}
+function toShared(c){const o=clean(c);if(c.mon&&c.max!=null){const w=wound(c);o.tier=Math.max(0,WCOL.indexOf(w.color));o.alive=w.alive}return o}
 function cleanMeta(m){m=m||{};const id=Number(m.tableId);
   return {tableId:Number.isFinite(id)&&id>0?id:null,tableName:str(m.tableName,60),inCombat:m.inCombat===true,round:num(m.round,1,1),turn:num(m.turn,0,0,999)}}
-function schedulePush(){if(!DBX)return;clearTimeout(pushT);pushT=setTimeout(push,250)}
-async function push(){if(!DBX)return;if(pushing){again=true;return}pushing=true;
+function schedulePush(){if(!DBX||(FB&&!ROOM))return;clearTimeout(pushT);pushT=setTimeout(push,250)}
+async function push(){if(!DBX||(FB&&!ROOM))return;if(pushing){again=true;return}pushing=true;
   try{let list,meta;
     if(ROLE==="player"){if(!REM.meta||!REM.meta.tableId)return;list=PS.list;meta={...REM.meta,round:PS.round,turn:PS.turn}}
     else{const p=P();if(!S||!p||!p.live)return;list=S.list;meta={tableId:DB.cur,tableName:p.name,inCombat:!!S.inCombat,round:S.round,turn:S.turn}}
     const sm=ser(meta);if(sm!==lastMeta){lastMeta=sm;await DBX.doc("meta/live").set(meta)}
-    for(const c0 of list){const c=clean(c0),s=ser(c);if(s!==lastSent[c.id]){lastSent[c.id]=s;await DBX.doc("live/"+c.id).set(c)}}
+    for(const c0 of list){const c=toShared(c0),s=ser(c);if(s!==lastSent[c.id]){lastSent[c.id]=s;await DBX.doc("live/"+c.id).set(c)}}
     if(ROLE!=="player")for(const id of Object.keys(lastSent))if(!list.some(c=>String(c.id)===id)){delete lastSent[id];await DBX.doc("live/"+id).delete()}
   }catch(e){console.warn("sync",e)}finally{pushing=false;if(again){again=false;schedulePush()}}}
+// fields a player may change on a shared combatant (the GM keeps the rest, including monster max HP)
+const EDITABLE=["name","init","bonus","hp","temp","dmg","ds","max"];
 // merge remote combatants into a local list without undoing our own unsent changes
 function mergeRemote(local,docs){const by=new Map(local.map(c=>[c.id,c])),out=[];
   for(const r of docs){const s=ser(r),l=by.get(r.id);by.delete(r.id);
-    if(l){if(s===lastSent[r.id]||s===ser(clean(l)))out.push(l);else{out.push(r);lastSent[r.id]=s}}
+    if(l){if(s===lastSent[r.id]||s===ser(toShared(l)))out.push(l);
+      else if(ROLE==="player"){out.push(r);lastSent[r.id]=s}
+      else{EDITABLE.forEach(k=>{if(k in r&&!(k==="max"&&l.mon))l[k]=r[k]});out.push(l);lastSent[r.id]=s}}
     else if(ROLE==="player"||lastSent[r.id]===undefined){out.push(r);lastSent[r.id]=s}}
   // the GM is the only one who adds or removes combatants: keep his local ones, players follow the remote list
   if(ROLE!=="player")for(const l of by.values())out.push(l);
@@ -582,16 +598,30 @@ function onRemote(){
   const p=P();if(!S||!p||!p.live||!REM.meta||REM.meta.tableId!==DB.cur)return;
   S.list=mergeRemote(S.list,REM.docs);
   const sm=ser(REM.meta);if(sm!==lastMeta){lastMeta=sm;S.round=REM.meta.round||1;S.turn=REM.meta.turn||0;S.inCombat=!!REM.meta.inCombat}
-  if(!sheet)render()}
-async function setLive(on){if(!DBX||!S)return;const p=P();DB.parties.forEach(x=>x.live=false);lastSent={};lastMeta="";
+  if(!sheet)render();schedulePush()}
+function subscribeRemote(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];
+  unsubs.push(DBX.doc("meta/live").onSnapshot(s=>{REM.meta=s.exists?cleanMeta(s.data()):null;onRemote()},e=>console.warn("meta",e)));
+  unsubs.push(DBX.collection("live").onSnapshot(q=>{REM.docs=q.docs.map(d=>clean(d.data())).filter(c=>c.id>0).slice(0,60);onRemote()},e=>console.warn("live",e)))}
+let unsubs=[],FB=null,ROOM=null,liveMsg="";
+async function setLive(on){if(!DBX||!S)return;const p=P();
+  if(FB){
+    if(on){liveMsg="Connecting…";render();
+      try{if(p.room){try{await claimRoom(p.room)}catch(e){p.room=await createRoom()}}else p.room=await createRoom()}
+      catch(e){console.warn(e);liveMsg="Could not open a live room. Check the connection and try again.";render();return}
+      DB.parties.forEach(x=>x.live=false);p.live=true;liveMsg="";save();connectRoom(p.room.id);render();return}
+    await DBX.doc("meta/live").set({tableId:null}).catch(()=>{});p.live=false;disconnectRoom();save();render();return}
+  DB.parties.forEach(x=>x.live=false);lastSent={};lastMeta="";
   if(on){p.live=true;for(const r of REM.docs)if(!S.list.some(c=>c.id===r.id))await DBX.doc("live/"+r.id).delete().catch(()=>{})}
   else await DBX.doc("meta/live").set({tableId:null}).catch(()=>{});
   render()}
 function setRole(r){ROLE=r;try{localStorage.setItem(KEY+"-role",r)}catch(e){}lastSent={};lastMeta="";sheet=null;
-  if(r==="player"){PS.list=[];onRemote()}else{openParty(DB.cur);render()}}
+  if(r==="player"){PS.list=[];if(FB){let rm=null;try{rm=localStorage.getItem(KEY+"-room")}catch(e){}if(rm)connectRoom(rm);else disconnectRoom()}onRemote()}
+  else{openParty(DB.cur);if(FB){const p=DB.parties.find(x=>x.live&&x.room);if(p)connectRoom(p.room.id);else disconnectRoom()}render()}}
 function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
-  if(!DBX){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">Sign in to Claude with access to this page to follow your table.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
-  if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">Waiting for the GM to share a table live. This screen updates on its own.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
+  const back=IS_OWNER?`<button class="ghost" id="asgm">Back to my tables</button>`:"";
+  const join=FB?`<div class="joinrow"><input type="text" id="f-room" placeholder="Room code" autocomplete="off" autocapitalize="characters" value="${esc(ROOM||"")}"><button class="next" id="joinroom">Join</button></div>`:"";
+  if(!DBX){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">${FB===null&&!window.claude?"Connecting… Live play needs an internet connection.":"Sign in to Claude with access to this page to follow your table."}</p>${back}</section>`;return}
+  if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">${FB?(ROOM?"Waiting for the GM to share the table. This screen updates on its own.":"Scan the GM’s QR code, or type the room code shown on the GM’s phone."):"Waiting for the GM to share a table live. This screen updates on its own."}</p>${join}${back}</section>`;return}
   S=PS;const order=sorted();if(S.turn>=order.length)S.turn=0;const a=order[S.turn];
   const shown=S.inCombat?order.slice(S.turn).concat(order.slice(0,S.turn)):S.list.filter(c=>!c.mon);
   app.innerHTML=`<header><div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${IS_OWNER?`<button id="asgm">GM view</button>`:""}${awakeBtn()}<button id="add">+ Add</button></header>
@@ -601,11 +631,52 @@ function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
   ${sheet&&sheet!=="table"&&sheet!=="start"&&sheet!=="enc"?sheetHtml():""}`;
   const l=document.querySelector(".party.combat");if(l){const k=S.round+"|"+S.turn;if(k!==lastTurn){l.scrollTop=0;lastTurn=k}else l.scrollTop=keepScroll}
   schedulePush()}
-(async()=>{try{if(!window.claude||!window.claude.use)return;const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
-  if(user)IS_OWNER=await user.isOwner();if(!IS_OWNER)ROLE="player";if(!db){render();return}DBX=db;
-  DBX.doc("meta/live").onSnapshot(s=>{REM.meta=s.exists?cleanMeta(s.data()):null;onRemote()},e=>console.warn("meta",e));
-  DBX.collection("live").onSnapshot(q=>{REM.docs=q.docs.map(d=>clean(d.data())).filter(c=>c.id>0).slice(0,60);onRemote()},e=>console.warn("live",e));
-  render()}catch(e){console.warn("cloud",e)}})();
+// ---------- Firebase (web version) ----------
+// The GM role is tied to a secret room key kept on the GM's phone, not to the anonymous account,
+// so Firebase deleting anonymous accounts after 30 days never locks a GM out of a room.
+const FB_CONFIG={apiKey:"AIzaSyDntOwHji3JmjiAj6SY-Rjm7I2GG-iNnSA",authDomain:"initable.firebaseapp.com",projectId:"initable",
+  storageBucket:"initable.firebasestorage.app",messagingSenderId:"936791557072",appId:"1:936791557072:web:eb84339b83ce76f894afd5"};
+const FB_V="10.12.2";
+const RID="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function rand(n,abc){const a=new Uint32Array(n);crypto.getRandomValues(a);return [...a].map(x=>abc[x%abc.length]).join("")}
+async function initFirebase(){
+  const mods=window.__fbModules||await Promise.all(["app","auth","firestore"].map(m=>import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-${m}.js`)));
+  const [app,auth,fs]=mods;const a=app.initializeApp(FB_CONFIG);const au=auth.getAuth(a);
+  await auth.signInAnonymously(au);
+  FB={fs,db:fs.getFirestore(a),uid:au.currentUser.uid};DBX=fbAdapter();
+  const j=/join=([A-Za-z0-9]{6,12})/.exec(location.hash);
+  if(j){const code=j[1].toUpperCase();history.replaceState(null,"",location.pathname+location.search);
+    try{localStorage.setItem(KEY+"-room",code);localStorage.setItem(KEY+"-role","player")}catch(e){}ROLE="player";connectRoom(code)}
+  else if(ROLE==="player"){let rm=null;try{rm=localStorage.getItem(KEY+"-room")}catch(e){}if(rm)connectRoom(rm)}
+  else{const p=DB.parties.find(x=>x.live&&x.room);if(p){try{await claimRoom(p.room);connectRoom(p.room.id)}catch(e){console.warn(e);p.live=false}}}
+  render()}
+const roomRef=id=>FB.fs.doc(FB.db,"rooms",id||ROOM);
+function fbAdapter(){const fs=FB.fs;
+  return {doc(path){
+      if(path==="meta/live")return {set:d=>fs.setDoc(roomRef(),d,{merge:true}),
+        onSnapshot:(next,err)=>fs.onSnapshot(roomRef(),s=>next({exists:s.exists(),data:()=>s.data()}),err)};
+      const ref=()=>fs.doc(FB.db,"rooms",ROOM,"c",path.split("/")[1]);
+      return {set:d=>fs.setDoc(ref(),d),delete:()=>fs.deleteDoc(ref())}},
+    collection(){return {onSnapshot:(next,err)=>fs.onSnapshot(fs.collection(FB.db,"rooms",ROOM,"c"),q=>next({docs:q.docs.map(d=>({id:d.id,data:()=>d.data()}))}),err)}}}}
+async function createRoom(){const fs=FB.fs,id=rand(8,RID),key=rand(24,RID+"abcdefghijkmnpqrstuvwxyz");
+  await fs.setDoc(roomRef(id),{tableId:DB.cur,tableName:P().name,inCombat:false,round:1,turn:0});
+  await fs.setDoc(fs.doc(FB.db,"rooms",id,"secret","key"),{k:key});
+  await fs.setDoc(fs.doc(FB.db,"rooms",id,"gms",FB.uid),{k:key});
+  return {id,key}}
+async function claimRoom(room){const fs=FB.fs,ref=fs.doc(FB.db,"rooms",room.id,"gms",FB.uid);
+  const s=await fs.getDoc(ref);if(!s.exists())await fs.setDoc(ref,{k:room.key})}
+function connectRoom(id){if(!FB)return;ROOM=id;REM={meta:null,docs:[]};lastSent={};lastMeta="";subscribeRemote()}
+function disconnectRoom(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];ROOM=null;REM={meta:null,docs:[]};lastSent={};lastMeta=""}
+function joinUrl(id){return location.origin+location.pathname+"#join="+id}
+function shareBlock(){const p=P();if(!FB||!p||!p.live||!p.room)return liveMsg?`<p class="note">${esc(liveMsg)}</p>`:"";
+  let qr="";try{const q=qrcode(0,"M");q.addData(joinUrl(p.room.id));q.make();qr=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){}
+  return `<div class="share">${qr?`<div class="qr">${qr}</div>`:""}<div class="sharetxt"><span class="steplbl">Room code</span><b class="code">${esc(p.room.id)}</b>
+    <span class="note">Players scan this code with their phone camera, or open Initable › “Open the player screen” and type the code.</span>
+    <button class="ghost" id="copylink">Copy invite link</button></div></div>`}
+(async()=>{try{
+  if(window.claude&&window.claude.use){const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+    if(user)IS_OWNER=await user.isOwner();if(!IS_OWNER)ROLE="player";if(!db){render();return}DBX=db;subscribeRemote();render();return}
+  await initFirebase()}catch(e){console.warn("cloud",e);render()}})();
 // ---------- keep screen on + eco standby ----------
 // When "keep screen on" is active, the phone never locks; after ECO_MS without a tap the app shows a near-black
 // standby screen (OLED pixels off) with the round and whose turn it is. Any tap wakes it without changing anything.
