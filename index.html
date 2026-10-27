@@ -334,7 +334,7 @@ function renderWelcome(){const ps=DB.parties;document.getElementById("app").inne
   ${DBX?`<button class="ghost" id="asplayer">Open the player screen</button>`:""}
   ${SKIN_PICKER?`<div class="skins"><span class="steplbl">Skin</span>${Object.entries(SKINS).map(([k,v])=>`<button data-skin="${k}" class="${skin()===k?"on":""}">${v}</button>`).join("")}</div>`:""}
   <p class="ver">Initable ${APP_VERSION}${FB?" · live sync ready":(window.claude?"":" · offline mode")}</p></section>`;save()}
-const APP_VERSION="v0.4";
+const APP_VERSION="v0.5";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
@@ -627,7 +627,7 @@ function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
   if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">${FB?(ROOM?"Waiting for the GM to share the table. This screen updates on its own.":"Scan the GM’s QR code, or type the room code shown on the GM’s phone."):"Waiting for the GM to share a table live. This screen updates on its own."}</p>${join}${back}</section>`;return}
   S=PS;const order=sorted();if(S.turn>=order.length)S.turn=0;const a=order[S.turn];
   const shown=S.inCombat?order.slice(S.turn).concat(order.slice(0,S.turn)):S.list.filter(c=>!c.mon);
-  app.innerHTML=`<header><div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${IS_OWNER?`<button id="asgm">GM view</button>`:""}${awakeBtn()}<button id="add">+ Add</button></header>
+  app.innerHTML=`<header>${IS_OWNER?`<button id="asgm" aria-label="Back to my tables">◀</button>`:""}<div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${awakeBtn()}<button id="add">+ Add</button></header>
   <div class="party ${S.inCombat?"combat":""}">${shown.length?shown.map(c=>tile(c,S.inCombat&&c===a)).join(""):`<p class="hint">No characters at this table yet. Tap “+ Add” to enter yours.</p>`}</div>
   ${HINTED?"":`<p class="hint">Tap left −1 · right +1 · hold to keep counting</p>`}
   ${S.inCombat?`<div class="row"><button class="ghost" id="prev">◀ Back</button><button class="next" id="next">Next turn</button></div>`:""}
