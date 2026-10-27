@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -361,7 +362,7 @@ function installBlock(){if(window.claude||isStandalone())return "";
   if(installEvt)return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Add it to your home screen. Works offline.</span></div><button class="next" id="install">Install</button></div>`;
   if(isIOS())return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Tap <svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v9h14v-9"/></svg> in Safari, then “Add to Home Screen”.</span></div></div>`;
   return ""}
-const APP_VERSION="v0.10";
+const APP_VERSION="v0.11";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
@@ -613,7 +614,8 @@ async function push(){if(!DBX||(FB&&!ROOM))return;if(pushing){again=true;return}
   try{let list,meta;
     if(ROLE==="player"){if(!REM.meta||!REM.meta.tableId)return;list=PS.list;meta={...REM.meta,round:PS.round,turn:PS.turn}}
     else{const p=P();if(!S||!p||!p.live)return;list=S.list;meta={tableId:DB.cur,tableName:p.name,inCombat:!!S.inCombat,round:S.round,turn:S.turn}}
-    const sm=ser(meta);if(sm!==lastMeta){lastMeta=sm;await DBX.doc("meta/live").set(meta)}
+    // players may only write the round and the turn; a refused meta write must never block the HP updates below
+    const sm=ser(meta);if(sm!==lastMeta){lastMeta=sm;try{await DBX.doc("meta/live").set(ROLE==="player"?{round:meta.round,turn:meta.turn}:meta)}catch(e){console.warn("sync meta",e)}}
     for(const c0 of list){const c=toShared(c0),s=ser(c);if(s!==lastSent[c.id]){lastSent[c.id]=s;await DBX.doc("live/"+c.id).set(c)}}
     if(ROLE!=="player")for(const id of Object.keys(lastSent))if(!list.some(c=>String(c.id)===id)){delete lastSent[id];await DBX.doc("live/"+id).delete()}
   }catch(e){console.warn("sync",e)}finally{pushing=false;if(again){again=false;schedulePush()}}}
