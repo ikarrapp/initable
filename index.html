@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Initiative Table</title>
+<title>Initable</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Barlow+Semi+Condensed:wght@400;600;700&display=swap">
 <style>
 /* Layout: one locked portrait column — active combatant as a large card, the rest of the turn order below */
@@ -319,7 +319,7 @@ function launch(enc){if(!S.inCombat){S.list.forEach(c=>{if(!c.mon)c.init=1+Math.
 function newParty(name,state){const id=Date.now();DB.parties.push({id,name,state});openParty(id)}
 const blank=()=>({inCombat:false,round:1,turn:0,list:[]});
 function renderWelcome(){const ps=DB.parties;document.getElementById("app").innerHTML=`<section class="welcome">
-  <h1>Initiative Table</h1>
+  <h1>Initable</h1>
   ${ps.length?`<p class="lead">Your tables</p><div class="tables">${ps.map(p=>{const n=p.state.list.filter(c=>!c.mon).length;
     return `<button class="trow" data-open="${p.id}"><span class="name">${esc(p.name)}</span><span class="note">${n} character${n===1?"":"s"}${p.state.inCombat?" · in a fight":""}</span></button>`}).join("")}</div>`
   :`<p class="lead">One phone in the middle of the table.<br>Tap left to lose HP, right to gain it.</p>
@@ -590,8 +590,8 @@ async function setLive(on){if(!DBX||!S)return;const p=P();DB.parties.forEach(x=>
 function setRole(r){ROLE=r;try{localStorage.setItem(KEY+"-role",r)}catch(e){}lastSent={};lastMeta="";sheet=null;
   if(r==="player"){PS.list=[];onRemote()}else{openParty(DB.cur);render()}}
 function renderPlayer(){const app=document.getElementById("app"),m=REM.meta;
-  if(!DBX){app.innerHTML=`<section class="welcome"><h1>Initiative Table</h1><p class="lead">Player screen</p><p class="note">Sign in to Claude with access to this page to follow your table.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
-  if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initiative Table</h1><p class="lead">Player screen</p><p class="note">Waiting for the GM to share a table live. This screen updates on its own.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
+  if(!DBX){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">Sign in to Claude with access to this page to follow your table.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
+  if(!m||!m.tableId){app.innerHTML=`<section class="welcome"><h1>Initable</h1><p class="lead">Player screen</p><p class="note">Waiting for the GM to share a table live. This screen updates on its own.</p>${IS_OWNER?`<button class="ghost" id="asgm">Back to GM view</button>`:""}</section>`;return}
   S=PS;const order=sorted();if(S.turn>=order.length)S.turn=0;const a=order[S.turn];
   const shown=S.inCombat?order.slice(S.turn).concat(order.slice(0,S.turn)):S.list.filter(c=>!c.mon);
   app.innerHTML=`<header><div class="round tname"><span class="livedot">●</span> ${esc(m.tableName||"Table")}${S.inCombat?` · Round <b>${S.round}</b>`:""}</div>${IS_OWNER?`<button id="asgm">GM view</button>`:""}${awakeBtn()}<button id="add">+ Add</button></header>

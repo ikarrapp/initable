@@ -1,6 +1,6 @@
 {
-  "name": "Initiative Table",
-  "short_name": "Initiative",
+  "name": "Initable",
+  "short_name": "Initable",
   "description": "Initiative and hit point tracker for tabletop RPG tables.",
   "start_url": "./",
   "scope": "./",
