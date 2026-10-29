@@ -12,7 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Initable</title>
+
+</head>
+<body><title>Initable</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Barlow+Semi+Condensed:wght@400;600;700&display=swap">
 <style>
@@ -254,8 +256,6 @@ input[type=text],input[type=number]{font:inherit;font-size:1.1rem;color:var(--fg
 @media (prefers-reduced-motion:no-preference){.card,.active{transition:border-color .2s}}
 </style>
 
-</head>
-<body>
 <div id="app"></div>
 
 <script>
@@ -365,7 +365,7 @@ function installBlock(){if(window.claude||isStandalone())return "";
   if(installEvt)return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Add it to your home screen. Works offline.</span></div><button class="next" id="install">Install</button></div>`;
   if(isIOS())return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Tap <svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v9h14v-9"/></svg> in Safari, then “Add to Home Screen”.</span></div></div>`;
   return ""}
-const APP_VERSION="v0.13";
+const APP_VERSION="v0.15";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
@@ -797,6 +797,48 @@ document.addEventListener("click",e=>{if(e.target.closest("#awake")){e.stopImmed
 if(KEEP){wake();armEco()}
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock("portrait").catch(()=>{})}catch(e){}
 render();
+</script>
+<script>
+/* i18n: French when the phone is set to French. Translates rendered text, never user-typed names. */
+(function(){
+let O=null;try{O=localStorage.getItem("initable-lang")}catch(e){}
+const FRL=O?O==="fr":(navigator.languages&&navigator.languages[0]||navigator.language||"en").toLowerCase().startsWith("fr");
+const st=document.createElement("style");st.textContent=".welcome h1{display:flex;align-items:center;justify-content:space-between;gap:8px}.langsw{font:600 .75rem system-ui,sans-serif;letter-spacing:.05em;color:var(--muted,#9aa);background:none;border:1px solid currentColor;border-radius:999px;padding:4px 10px;cursor:pointer;opacity:.8}.langsw b{color:var(--accent)}";document.head.appendChild(st);
+function sw(){document.querySelectorAll(".welcome h1").forEach(h=>{if(h.querySelector(".langsw"))return;const b=document.createElement("button");b.className="langsw";b.dataset.nt="";b.setAttribute("aria-label",FRL?"Switch to English":"Passer en français");b.innerHTML=FRL?"EN · <b>FR</b>":"<b>EN</b> · FR";b.onclick=e=>{e.stopPropagation();try{localStorage.setItem("initable-lang",FRL?"en":"fr")}catch(x){}location.reload()};h.appendChild(b)})}
+if(!FRL){const g=()=>{sw();new MutationObserver(sw).observe(document.body,{childList:true,subtree:true})};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",g):g();return}
+document.documentElement.lang="fr";
+const D={"+ Add a monster":"+ Ajouter un monstre","+ Add":"+ Ajouter","+ Prepare an encounter":"+ Préparer une rencontre","Add another":"Ajouter un autre","Add it to your home screen. Works offline.":"Ajoutez-la à l’écran d’accueil. Fonctionne hors ligne.",
+"All player characters: full HP, no temp HP, conditions and death saves cleared, Exhaustion −1.":"Tous les personnages joueurs : PV au max, plus de PV temporaires, états et jets contre la mort effacés, Épuisement −1.",
+"At 0 HP: track death saves on the main screen.":"À 0 PV : suivez les jets contre la mort sur l’écran principal.","Back to my tables":"Retour à mes tables","Between fights":"Entre les combats","Cancel":"Annuler","Close":"Fermer","Copy invite link":"Copier le lien d’invitation","Count":"Nombre","Done":"OK","Encounter name":"Nom de la rencontre","End fight":"Finir","Fight without encounter":"Combat sans rencontre","GM away":"MJ absent","GM":"MJ",
+"Group: one initiative, one shared damage pool. Each creature has total ÷ group size HP. Leave Initiative empty to roll it.":"Groupe : une initiative, une réserve de dégâts commune. Chaque créature a total ÷ taille du groupe PV. Laissez l’initiative vide pour la tirer.",
+"Group":"Groupe","HP each":"PV chacun","Init bonus":"Bonus d’init.","Initiative":"Initiative","Install":"Installer","Join a table":"Rejoindre une table","Join":"Rejoindre","Keep one party per table you run.":"Un groupe par table que vous menez.","Launch an encounter":"Lancer une rencontre",
+"Live sharing interrupted: players don’t see your changes.":"Partage en direct interrompu : les joueurs ne voient pas vos changements.","Long rest":"Repos long","Max HP is the group's total; it stays off the table view.":"Les PV max sont le total du groupe ; ils restent cachés à la table.","Monster":"Monstre","Monsters show damage taken, never their HP left.":"Les monstres affichent les dégâts subis, jamais leurs PV restants.","Name":"Nom","New fight":"Nouveau combat","Next turn":"Tour suivant",
+"No characters at this table yet. Tap “+ Add” to enter yours.":"Pas encore de personnage à cette table. Touchez « + Ajouter » pour entrer le vôtre.",
+"No characters yet. When the players arrive, hand them the phone: each taps “+ Add” to enter their character once. You can already prepare encounters with “Start fight”.":"Pas encore de personnage. Quand les joueurs arrivent, passez-leur le téléphone : chacun touche « + Ajouter » pour entrer son personnage une fois. Vous pouvez déjà préparer des rencontres avec « Lancer le combat ».",
+"No prepared encounters for this table yet. Prepare one before the session to add all its monsters in one tap.":"Pas encore de rencontre préparée pour cette table. Préparez-en une avant la séance pour ajouter tous ses monstres d’un geste.",
+"One phone in the middle of the table.":"Un téléphone au milieu de la table.","Open the player screen":"Ouvrir l’écran joueur","Player character":"Personnage joueur","Player screen":"Écran joueur",
+"Players scan this code with their phone camera, or open Initable › “Open the player screen” and type the code.":"Les joueurs scannent ce code avec l’appareil photo, ou ouvrent Initable › « Rejoindre une table » et tapent le code.",
+"Reconnect live sharing":"Relancer le partage en direct","Remove it from my tables":"La retirer de mes tables","Remove":"Retirer","Roll":"Lancer","Room code":"Code de la salle","Save encounter":"Enregistrer la rencontre","Skin":"Thème","Start fight":"Lancer le combat","Table name":"Nom de la table","Tap left to lose HP, right to gain it.":"Touchez à gauche pour perdre des PV, à droite pour en gagner.",
+"Tap left −1 · right +1 · hold to keep counting · tap a name for details":"Gauche −1 · droite +1 · maintenir pour continuer · touchez un nom pour les détails","Tap left −1 · right +1 · hold to keep counting":"Gauche −1 · droite +1 · maintenir pour continuer","Tap to wake":"Touchez pour réveiller","This table has been deleted by the GM.":"Cette table a été supprimée par le MJ.","Try a demo":"Essayer une démo","Your party stays saved on this phone between games.":"Votre groupe reste enregistré sur ce téléphone d’une partie à l’autre.","Your tables":"Vos tables","damage":"dégâts","init":"init","offline":"hors ligne","◀ Back":"◀ Retour","Tap":"Touchez",
+"Add character":"Ajouter un personnage","Add combatant":"Ajouter un combattant","All tables":"Toutes les tables","Bridge ambush":"Embuscade au pont","Add":"Ajouter","Death save failures":"Échecs contre la mort","Death save successes":"Réussites contre la mort","Character name":"Nom du personnage","Create my party":"Créer mon groupe","Damage":"Dégâts","Delete encounter":"Supprimer la rencontre","Delete table":"Supprimer la table","Delete this table":"Supprimer cette table","Demo table":"Table de démo","Edit encounter":"Modifier la rencontre","Edit":"Modifier","Encounter":"Rencontre","Enter":"Entrer","Failure":"Échec","Success":"Réussite","Goblin":"Gobelin","Goblin chief":"Chef gobelin","Keep screen on":"Garder l’écran allumé","Link copied":"Lien copié","Live sharing interrupted":"Partage en direct interrompu","Live":"En direct","Menu":"Menu","New encounter":"Nouvelle rencontre","New table":"Nouvelle table","No monsters yet":"Pas encore de monstre","One fewer":"Un de moins","One more":"Un de plus","Quit":"Quitter","Remove from combat":"Retirer du combat","Remove from party":"Retirer du groupe","Share this table live with players":"Partager cette table en direct avec les joueurs","Standby":"Veille","Table settings":"Réglages de la table","Table":"Table","Tap again to delete":"Touchez encore pour supprimer","This browser refused to keep the screen on":"Ce navigateur refuse de garder l’écran allumé","Unnamed":"Sans nom","Roll d20 plus bonus":"Lancer d20 + bonus","Offline: this phone has no connection":"Hors ligne : ce téléphone n’a pas de connexion","The GM has not been active for a few minutes":"Le MJ est inactif depuis quelques minutes","Live with players · tap to stop":"En direct avec les joueurs · toucher pour arrêter","auto":"auto","Max HP (total)":"PV max (total)","Max HP":"PV max","HP":"PV","Temp HP":"PV temp.","Exhaustion":"Épuisement","Conditions":"États","Death saves":"Jets contre la mort","Round":"Round","Unknown":"Inconnu",
+"Blinded":"Aveuglé","Charmed":"Charmé","Concentration":"Concentration","Deafened":"Assourdi","Frightened":"Effrayé","Grappled":"Agrippé","Incapacitated":"Neutralisé","Invisible":"Invisible","Paralyzed":"Paralysé","Petrified":"Pétrifié","Poisoned":"Empoisonné","Prone":"À terre","Restrained":"Entravé","Stunned":"Étourdi","Unconscious":"Inconscient"};
+const pl=(n,s,p)=>n+" "+(n==1?s:p);
+const R=[[/^(\d+) characters?$/,(m,n)=>pl(n,"personnage","personnages")],[/^(\d+) players?$/,(m,n)=>pl(n,"joueur","joueurs")],[/^\[(\d+) players?\]$/,(m,n)=>"["+pl(n,"joueur","joueurs")+"]"],
+[/^(\d+) characters? · (\d+) players?(.*)$/,(m,a,b,r)=>pl(a,"personnage","personnages")+" · "+pl(b,"joueur","joueurs")+tr(r)],[/^(\d+) characters?( · .*)$/,(m,a,r)=>pl(a,"personnage","personnages")+tr(r)],
+[/^ · (.+)$/,(m,x)=>" · "+tr(x)],[/^Room (.+)$/,"Salle $1"],[/^Table (\w{8})$/,"Table $1"],[/^Round ?(\d*)$/,"Round $1"],[/^of (\d+) HP$/,"sur $1 PV"],[/^(\d+) \+ (\d+) temp · max (\d+)$/,"$1 + $2 temp. · max $3"],
+[/^(.*): tap left −1, right \+1$/,"$1 : gauche −1, droite +1"],[/^Quit (.+)$/,"Quitter $1"],[/^(.+) ✎$/,(m,x)=>tr(x)+" ✎"],[/^(.+) details$/,"Détails de $1"],[/^Edit (.+)$/,"Modifier $1"],[/^Failure (\d)$/,"Échec $1"],[/^Success (\d)$/,"Réussite $1"],[/^Reinforcements: join the (.+) group already fighting \(same initiative\)$/,"Renforts : rejoindre le groupe $1 déjà au combat (même initiative)"],
+[/^Removes (\d+) monsters?, back to round 1, rolls initiative for the (\d+) player characters? with their bonus\.(.*)$/,(m,a,b,r)=>`Retire ${pl(a,"monstre","monstres")}, retour au round 1, tire l’initiative de ${pl(b,"personnage joueur","personnages joueurs")} avec leur bonus.`+(r?" "+tr(r.trim()):"")],
+[/^HP and conditions are kept\.?$/,"PV et états sont conservés."],[/^Initable (v[\d.]+) · live sync ready$/,"Initable $1 · synchro en direct prête"],[/^Initable (v[\d.]+) · offline mode$/,"Initable $1 · mode hors ligne"],
+[/^(Character|Monster) (\d+)$/,(m,k,n)=>(k=="Character"?"Personnage ":"Monstre ")+n],[/^Players open this same page.*$/,"Les joueurs ouvrent cette même page sur leur téléphone et touchent « Ouvrir l’écran joueur ». Ils voient le groupe et le combat et peuvent changer tous les PV. Ils ne voient jamais vos rencontres."]];
+window.__frMiss=new Set();
+function tr(s){const k=s.trim();if(!k||!/[A-Za-z]/.test(k))return s;if(D[k]!=null)return s.replace(k,D[k]);for(const[re,f]of R){if(re.test(k))return s.replace(k,k.replace(re,f))}if(!Object.values(D).includes(k))window.__frMiss.add(k);return s}
+window.__tr=tr;
+const A=["title","aria-label","placeholder"],done=new WeakMap();
+function run(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const p=n.parentElement;if(!p||p.closest("script,style,input,textarea,.name,[data-nt]"))continue;if(done.get(n)===n.nodeValue)continue;const v=tr(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;done.set(n,n.nodeValue)}
+ (root.querySelectorAll?root:document).querySelectorAll("[title],[aria-label],[placeholder]").forEach(e=>A.forEach(a=>{if(e.closest("[data-nt]"))return;const v=e.getAttribute(a);if(v){const t=tr(v);if(t!==v)e.setAttribute(a,t)}}))}
+const go=()=>{sw();run(document.body);new MutationObserver(()=>{sw();run(document.body)}).observe(document.body,{childList:true,subtree:true,characterData:true})};
+document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go();
+})();
 </script>
 
 <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
