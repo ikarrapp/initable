@@ -333,11 +333,11 @@ function encSheet(){const e=encDraft;return `<div class="sheet" id="shade"><div 
 // change of monster name in an encounter row: fill HP and bonus from the monster list
 document.addEventListener("change",e=>{const m=/^e-n-(\d+)$/.exec(e.target.id||"");if(!m||!encDraft)return;const lib=DB.lib.mon[e.target.value.trim().toLowerCase()];
   if(lib){document.getElementById("e-h-"+m[1]).value=lib.per;document.getElementById("e-b-"+m[1]).value=lib.bonus}});
-function launch(enc){if(!S.inCombat){S.list.forEach(c=>{if(!c.mon)c.init=1+Math.floor(Math.random()*20)+(c.bonus||0)});S.inCombat=true;S.round=1;S.turn=0}
+function launch(enc){if(!S.inCombat){stat("fights");S.list.forEach(c=>{if(!c.mon)c.init=1+Math.floor(Math.random()*20)+(c.bonus||0)});S.inCombat=true;S.round=1;S.turn=0}
   const activeId=sorted()[S.turn]?.id;
   enc.items.filter(i=>i.name).forEach(i=>{const n={id:nid++,name:i.name,mon:true,count:i.count,max:i.per*i.count,dmg:0,bonus:i.bonus,conds:[],exh:0,ds:[0,0],init:1+Math.floor(Math.random()*20)+(i.bonus||0)};S.list.push(n);remember(n)});
   const k=sorted().findIndex(x=>x.id===activeId);S.turn=k<0?0:k}
-function newParty(name,state){const id=Date.now();DB.parties.push({id,name,state});openParty(id)}
+function newParty(name,state){const id=Date.now();if(!state||!state.demo)stat("tables");DB.parties.push({id,name,state});openParty(id)}
 const blank=()=>({inCombat:false,round:1,turn:0,list:[]});
 function renderWelcome(){const ps=DB.parties,js=FB?joined():[];document.getElementById("app").innerHTML=`<section class="welcome">
   <h1>Initable</h1>
@@ -365,7 +365,7 @@ function installBlock(){if(window.claude||isStandalone())return "";
   if(installEvt)return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Add it to your home screen. Works offline.</span></div><button class="next" id="install">Install</button></div>`;
   if(isIOS())return `<div class="installcard">${APP_ICON}<div class="installtxt"><b>Initable</b><span>Tap <svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v9h14v-9"/></svg> in Safari, then “Add to Home Screen”.</span></div></div>`;
   return ""}
-const APP_VERSION="v0.15";
+const APP_VERSION="v0.16";
 const SKIN_PICKER=false; // test phase: one skin only; set to true to show the skin choice again
 const SKINS={gilded:"Gilded Night",tavern:"Tavern",parchment:"Parchment",crimson:"Crimson"};
 const DEFAULT_SKIN="gilded";
@@ -650,7 +650,7 @@ function subscribeRemote(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];
   unsubs.push(DBX.doc("meta/live").onSnapshot(s=>{REM.meta=s.exists?cleanMeta(s.data()):null;onRemote()},e=>console.warn("meta",e)));
   unsubs.push(DBX.collection("live").onSnapshot(q=>{REM.docs=q.docs.map(d=>clean(d.data())).filter(c=>c.id>0).slice(0,60);onRemote()},e=>console.warn("live",e)))}
 let unsubs=[],FB=null,ROOM=null,liveMsg="";
-async function setLive(on){if(!DBX||!S)return;const p=P();
+async function setLive(on){if(!DBX||!S)return;const p=P();if(on&&!p.live)stat("live_shares");
   if(FB){
     if(on){liveMsg="Connecting…";render();
       try{if(p.room){try{await claimRoom(p.room)}catch(e){p.room=await createRoom()}}else p.room=await createRoom()}
@@ -687,11 +687,15 @@ const FB_CONFIG={apiKey:"AIzaSyDntOwHji3JmjiAj6SY-Rjm7I2GG-iNnSA",authDomain:"in
 const FB_V="10.12.2";
 const RID="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function rand(n,abc){const a=new Uint32Array(n);crypto.getRandomValues(a);return [...a].map(x=>abc[x%abc.length]).join("")}
+/* anonymous daily counters, readable by anyone, no personal data */
+let STQ=[];function stat(ev){if(!FB){STQ.push(ev);return}try{const d=new Date().toISOString().slice(0,10);FB.fs.setDoc(FB.fs.doc(FB.db,"stats",d),{[ev]:FB.fs.increment(1)},{merge:true}).catch(()=>{})}catch(e){}}
+function statOpen(){let seen=null;try{seen=localStorage.getItem(KEY+"-seen")}catch(e){}stat("opens");if(!seen){stat("new_devices");try{localStorage.setItem(KEY+"-seen","1")}catch(e){}}
+ stat(document.documentElement.lang==="fr"?"opens_fr":"opens_en");if(matchMedia("(display-mode: standalone)").matches)stat("opens_installed");STQ.splice(0).forEach(stat)}
 async function initFirebase(){
   const mods=window.__fbModules||await Promise.all(["app","auth","firestore"].map(m=>import(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-${m}.js`)));
   const [app,auth,fs]=mods;const a=app.initializeApp(FB_CONFIG);const au=auth.getAuth(a);
   await auth.signInAnonymously(au);
-  FB={fs,db:fs.getFirestore(a),uid:au.currentUser.uid};DBX=fbAdapter();
+  FB={fs,db:fs.getFirestore(a),uid:au.currentUser.uid};DBX=fbAdapter();statOpen();
   const j=/join=([A-Za-z0-9]{6,12})/.exec(location.hash);
   if(j){const code=j[1].toUpperCase();history.replaceState(null,"",location.pathname+location.search);
     rememberJoined(code);ROLE="player";connectRoom(code)}
@@ -733,7 +737,7 @@ function watchMembers(){if(!FB)return;const want=new Set(DB.parties.filter(p=>p.
       if(t.members!==q.size){t.members=q.size;save();if(!sheet||sheet==="table")render()}},()=>{})}}
 function joined(){try{return JSON.parse(localStorage.getItem(KEY+"-joined")||"[]")}catch(e){return []}}
 function saveJoined(l){try{localStorage.setItem(KEY+"-joined",JSON.stringify(l.slice(0,30)))}catch(e){}}
-function rememberJoined(id,name){const l=joined().filter(j=>j.id!==id);const old=joined().find(j=>j.id===id);l.unshift({id,name:name||old?.name||""});saveJoined(l)}
+function rememberJoined(id,name){const l=joined().filter(j=>j.id!==id);const old=joined().find(j=>j.id===id);if(!old)stat("joins");l.unshift({id,name:name||old?.name||""});saveJoined(l)}
 function openJoined(id){rememberJoined(id);ROLE="player";lastSent={};lastMeta="";sheet=null;PS.list=[];connectRoom(id);render()}
 function goHome(){ROLE="gm";sheet=null;DB.cur=null;S=null;if(FB){const p=DB.parties.find(x=>x.live&&x.room);if(p)connectRoom(p.room.id);else disconnectRoom()}render()}
 // A live table never switches itself off: if the GM's phone cannot reach its room, it retries,
